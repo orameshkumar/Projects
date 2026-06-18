@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Doubles Score Sheet</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🏸 Badminton Doubles Score Sheet</h1>
+
+        <!-- Match Setup -->
+        <section id="setup-section" class="section">
+            <h2>Match Setup</h2>
+            <div class="setup-grid">
+                <div class="team-setup">
+                    <h3>Team A</h3>
+                    <input type="text" id="teamA-player1" placeholder="Player 1 Name">
+                    <input type="text" id="teamA-player2" placeholder="Player 2 Name">
+                </div>
+                <div class="team-setup">
+                    <h3>Team B</h3>
+                    <input type="text" id="teamB-player1" placeholder="Player 1 Name">
+                    <input type="text" id="teamB-player2" placeholder="Player 2 Name">
+                </div>
+            </div>
+            <div class="match-options">
+                <label>Match Format:
+                    <select id="match-format">
+                        <option value="3">Best of 3 Sets</option>
+                        <option value="1">Single Set</option>
+                    </select>
+                </label>
+                <label>Points per Set:
+                    <select id="points-per-set">
+                        <option value="21">21 Points</option>
+                        <option value="15">15 Points</option>
+                        <option value="11">11 Points</option>
+                    </select>
+                </label>
+            </div>
+            <button id="start-match" class="btn btn-primary">Start Match</button>
+        </section>
+
+        <!-- Scoreboard -->
+        <section id="scoreboard-section" class="section hidden">
+            <div class="set-indicator">
+                <span id="current-set">Set 1</span>
+                <span id="set-scores"></span>
+            </div>
+            <div class="scoreboard">
+                <div class="team-score team-a-score">
+                    <div class="team-name" id="teamA-name">Team A</div>
+                    <div class="score" id="scoreA">0</div>
+                    <button class="btn btn-score" id="btn-scoreA">+1 Point</button>
+                </div>
+                <div class="vs">VS</div>
+                <div class="team-score team-b-score">
+                    <div class="team-name" id="teamB-name">Team B</div>
+                    <div class="score" id="scoreB">0</div>
+                    <button class="btn btn-score" id="btn-scoreB">+1 Point</button>
+                </div>
+            </div>
+
+            <!-- Error Capture -->
+            <div class="error-section">
+                <h3>Record Error / Fault</h3>
+                <div class="error-controls">
+                    <select id="error-team">
+                        <option value="A">Team A</option>
+                        <option value="B">Team B</option>
+                    </select>
+                    <select id="error-player">
+                        <option value="1">Player 1</option>
+                        <option value="2">Player 2</option>
+                    </select>
+                    <select id="error-type">
+                        <option value="net">Net Fault</option>
+                        <option value="out">Shot Out</option>
+                        <option value="service">Service Fault</option>
+                        <option value="double-hit">Double Hit</option>
+                        <option value="carry">Carry/Sling</option>
+                        <option value="obstruction">Obstruction</option>
+                        <option value="unforced">Unforced Error</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <button class="btn btn-error" id="btn-record-error">Record Error</button>
+                </div>
+            </div>
+
+            <!-- Point History -->
+            <div class="history-section">
+                <h3>Point History (Current Set)</h3>
+                <div id="point-history" class="point-history"></div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-secondary" id="btn-undo">↩ Undo Last</button>
+                <button class="btn btn-secondary" id="btn-end-match">End Match</button>
+            </div>
+        </section>
+
+        <!-- Summary -->
+        <section id="summary-section" class="section hidden">
+            <h2>📊 Match Summary</h2>
+            <div id="match-result" class="match-result"></div>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h3>Set Results</h3>
+                    <div id="set-results"></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Error Summary</h3>
+                    <div id="error-summary"></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Player Error Breakdown</h3>
+                    <div id="player-errors"></div>
+                </div>
+                <div class="summary-card">
+                    <h3>Error Types</h3>
+                    <div id="error-types-summary"></div>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="btn-new-match">New Match</button>
+            <button class="btn btn-secondary" id="btn-print">🖨 Print Summary</button>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
