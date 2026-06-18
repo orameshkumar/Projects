@@ -3,7 +3,34 @@
 class BadmintonScoreSheet {
     constructor() {
         this.match = null;
+        this.STORAGE_KEY = 'badminton-player-names';
         this.initEventListeners();
+        this.loadPlayerNames();
+    }
+
+    // --- Player Name Autocomplete ---
+
+    getSavedPlayerNames() {
+        try {
+            const data = localStorage.getItem(this.STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    savePlayerNames(names) {
+        const existing = this.getSavedPlayerNames();
+        const updated = [...new Set([...existing, ...names])].filter(n => n && n.trim());
+        updated.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
+        this.loadPlayerNames();
+    }
+
+    loadPlayerNames() {
+        const names = this.getSavedPlayerNames();
+        const datalist = document.getElementById('player-names');
+        datalist.innerHTML = names.map(name => `<option value="${name}">`).join('');
     }
 
     initEventListeners() {
@@ -24,6 +51,9 @@ class BadmintonScoreSheet {
         const teamB2 = document.getElementById('teamB-player2').value.trim() || 'Player B2';
         const format = parseInt(document.getElementById('match-format').value);
         const pointsPerSet = parseInt(document.getElementById('points-per-set').value);
+
+        // Save player names for future autocomplete
+        this.savePlayerNames([teamA1, teamA2, teamB1, teamB2]);
 
         this.match = {
             teamA: { players: [teamA1, teamA2], name: `${teamA1} / ${teamA2}` },

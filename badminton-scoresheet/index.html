@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Doubles Score Sheet</title>
+    <title>SPARK Badminton Doubles Score Sheet</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>🏸 Badminton Doubles Score Sheet</h1>
+        <h1>🏸 SPARK Badminton Doubles Score Sheet</h1>
 
         <!-- Match Setup -->
         <section id="setup-section" class="section">
@@ -16,14 +16,15 @@
             <div class="setup-grid">
                 <div class="team-setup">
                     <h3>Team A</h3>
-                    <input type="text" id="teamA-player1" placeholder="Player 1 Name">
-                    <input type="text" id="teamA-player2" placeholder="Player 2 Name">
+                    <input type="text" id="teamA-player1" placeholder="Player 1 Name" list="player-names" autocomplete="off">
+                    <input type="text" id="teamA-player2" placeholder="Player 2 Name" list="player-names" autocomplete="off">
                 </div>
                 <div class="team-setup">
                     <h3>Team B</h3>
-                    <input type="text" id="teamB-player1" placeholder="Player 1 Name">
-                    <input type="text" id="teamB-player2" placeholder="Player 2 Name">
+                    <input type="text" id="teamB-player1" placeholder="Player 1 Name" list="player-names" autocomplete="off">
+                    <input type="text" id="teamB-player2" placeholder="Player 2 Name" list="player-names" autocomplete="off">
                 </div>
+            <datalist id="player-names"></datalist>
             </div>
             <div class="match-options">
                 <label>Match Format:
