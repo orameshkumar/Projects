@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏸 SPARK Badminton Doubles Score Sheet</h1>
+        <header class="app-header">
+            <h1>🏸 SPARK Badminton Doubles Score Sheet</h1>
+            <div class="header-controls">
+                <button class="btn btn-icon" id="btn-theme-toggle" title="Toggle Theme">🌙</button>
+                <button class="btn btn-icon" id="btn-show-history" title="Match History">📜</button>
+                <button class="btn btn-icon" id="btn-show-leaderboard" title="Leaderboard">🏆</button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-section="setup-section">New Match</button>
+            <button class="nav-tab" data-section="history-page">History</button>
+            <button class="nav-tab" data-section="leaderboard-page">Leaderboard</button>
+        </nav>
 
         <!-- Match Setup -->
         <section id="setup-section" class="section">
@@ -24,7 +38,7 @@
                     <input type="text" id="teamB-player1" placeholder="Player 1 Name" list="player-names" autocomplete="off">
                     <input type="text" id="teamB-player2" placeholder="Player 2 Name" list="player-names" autocomplete="off">
                 </div>
-            <datalist id="player-names"></datalist>
+                <datalist id="player-names"></datalist>
             </div>
             <div class="match-options">
                 <label>Match Format:
@@ -50,6 +64,20 @@
                 <span id="current-set">Set 1</span>
                 <span id="set-scores"></span>
             </div>
+
+            <!-- Service Indicator -->
+            <div class="service-indicator">
+                <div class="service-side" id="service-left">
+                    <span class="shuttle-icon">🏸</span>
+                    <span id="service-label-left">Team A</span>
+                </div>
+                <button class="btn btn-service" id="btn-switch-service">⇄ Switch Service</button>
+                <div class="service-side" id="service-right">
+                    <span class="shuttle-icon">🏸</span>
+                    <span id="service-label-right">Team B</span>
+                </div>
+            </div>
+
             <div class="scoreboard">
                 <div class="team-score team-a-score">
                     <div class="team-name" id="teamA-name">Team A</div>
@@ -124,9 +152,35 @@
                     <div id="error-types-summary"></div>
                 </div>
             </div>
-            <button class="btn btn-primary" id="btn-new-match">New Match</button>
-            <button class="btn btn-secondary" id="btn-save-summary">💾 Save Summary</button>
-            <button class="btn btn-secondary" id="btn-print">🖨 Print Summary</button>
+            <div class="summary-actions">
+                <button class="btn btn-primary" id="btn-new-match">New Match</button>
+                <button class="btn btn-secondary" id="btn-save-summary">💾 Save Summary</button>
+                <button class="btn btn-secondary" id="btn-share-card">📷 Share Card</button>
+                <button class="btn btn-secondary" id="btn-print">🖨 Print</button>
+            </div>
+            <!-- Share card canvas (hidden) -->
+            <canvas id="share-canvas" style="display:none;"></canvas>
+            <div id="share-preview" class="share-preview hidden"></div>
+        </section>
+
+        <!-- Match History Page -->
+        <section id="history-page" class="section hidden">
+            <h2>📜 Match History</h2>
+            <div class="history-filters">
+                <input type="text" id="history-search" placeholder="Search by player name..." class="filter-input">
+                <input type="date" id="history-date" class="filter-input">
+                <button class="btn btn-secondary btn-sm" id="btn-clear-filters">Clear</button>
+            </div>
+            <div id="history-list" class="history-list"></div>
+            <div class="history-actions">
+                <button class="btn btn-error btn-sm" id="btn-clear-history">🗑 Clear All History</button>
+            </div>
+        </section>
+
+        <!-- Leaderboard Page -->
+        <section id="leaderboard-page" class="section hidden">
+            <h2>🏆 Player Leaderboard</h2>
+            <div id="leaderboard-content" class="leaderboard-content"></div>
         </section>
     </div>
 
