@@ -41,6 +41,7 @@ class BadmintonScoreSheet {
         document.getElementById('btn-undo').addEventListener('click', () => this.undoLast());
         document.getElementById('btn-end-match').addEventListener('click', () => this.endMatch());
         document.getElementById('btn-new-match').addEventListener('click', () => this.newMatch());
+        document.getElementById('btn-save-summary').addEventListener('click', () => this.saveSummary());
         document.getElementById('btn-print').addEventListener('click', () => window.print());
     }
 
@@ -388,6 +389,87 @@ class BadmintonScoreSheet {
         const minutes = Math.floor(diff / 60000);
         const seconds = Math.floor((diff % 60000) / 1000);
         return `${minutes}m ${seconds}s`;
+    }
+
+    saveSummary() {
+        const winnerTeam = this.match.winner === 'A' ? this.match.teamA : this.match.teamB;
+        const loserTeam = this.match.winner === 'A' ? this.match.teamB : this.match.teamA;
+        const date = new Date().toLocaleDateString();
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        let text = '';
+        text += '═══════════════════════════════════════════\n';
+        text += '       BADMINTON DOUBLES - MATCH SUMMARY\n';
+        text += '═══════════════════════════════════════════\n';
+        text += `Date: ${date}  |  Time: ${time}\n`;
+        text += `Duration: ${this.getMatchDuration()}\n\n`;
+
+        text += `🏆 WINNER: ${winnerTeam.name}\n`;
+        text += `   defeated ${loserTeam.name}\n`;
+        text += `   Sets: ${this.match.setsWon.A} - ${this.match.setsWon.B}\n\n`;
+
+        text += '───────────────────────────────────────────\n';
+        text += ' SET RESULTS\n';
+        text += '───────────────────────────────────────────\n';
+        text += `  ${'Set'.padEnd(8)}${'Team A'.padEnd(10)}Team B\n`;
+        this.match.sets.forEach((set, i) => {
+            text += `  ${('Set ' + (i + 1)).padEnd(8)}${String(set.scoreA).padEnd(10)}${set.scoreB}\n`;
+        });
+
+        text += '\n───────────────────────────────────────────\n';
+        text += ' ERROR SUMMARY\n';
+        text += '───────────────────────────────────────────\n';
+        const errorsA = this.match.allErrors.filter(e => e.team === 'A').length;
+        const errorsB = this.match.allErrors.filter(e => e.team === 'B').length;
+        text += `  ${this.match.teamA.name}: ${errorsA} errors\n`;
+        text += `  ${this.match.teamB.name}: ${errorsB} errors\n`;
+        text += `  Total: ${errorsA + errorsB} errors\n`;
+
+        // Player breakdown
+        const playerErrorMap = {};
+        this.match.allErrors.forEach(e => {
+            if (!playerErrorMap[e.playerName]) playerErrorMap[e.playerName] = 0;
+            playerErrorMap[e.playerName]++;
+        });
+
+        if (Object.keys(playerErrorMap).length > 0) {
+            text += '\n  Player Breakdown:\n';
+            Object.entries(playerErrorMap)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([name, count]) => {
+                    text += `    ${name}: ${count}\n`;
+                });
+        }
+
+        // Error types
+        const errorTypeMap = {};
+        this.match.allErrors.forEach(e => {
+            if (!errorTypeMap[e.errorTypeLabel]) errorTypeMap[e.errorTypeLabel] = 0;
+            errorTypeMap[e.errorTypeLabel]++;
+        });
+
+        if (Object.keys(errorTypeMap).length > 0) {
+            text += '\n  Error Types:\n';
+            Object.entries(errorTypeMap)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([type, count]) => {
+                    text += `    ${type}: ${count}\n`;
+                });
+        }
+
+        text += '\n═══════════════════════════════════════════\n';
+
+        // Create and download the file
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const filename = `match-summary_${date.replace(/\//g, '-')}_${time.replace(/:/g, '')}.txt`;
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     newMatch() {
