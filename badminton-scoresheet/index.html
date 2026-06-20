@@ -95,26 +95,61 @@
             <!-- Error Capture -->
             <div class="error-section">
                 <h3>Record Error / Fault</h3>
-                <div class="error-controls">
-                    <select id="error-team">
-                        <option value="A">Team A</option>
-                        <option value="B">Team B</option>
-                    </select>
-                    <select id="error-player">
-                        <option value="1">Player 1</option>
-                        <option value="2">Player 2</option>
-                    </select>
-                    <select id="error-type">
-                        <option value="net">Net Fault</option>
-                        <option value="out">Shot Out</option>
-                        <option value="service">Service Fault</option>
-                        <option value="double-hit">Double Hit</option>
-                        <option value="carry">Carry/Sling</option>
-                        <option value="obstruction">Obstruction</option>
-                        <option value="unforced">Unforced Error</option>
-                        <option value="other">Other</option>
-                    </select>
-                    <button class="btn btn-error" id="btn-record-error">Record Error</button>
+
+                <!-- Quick Error Buttons (no mic needed) -->
+                <div class="quick-error-grid">
+                    <div class="quick-error-label">Quick Error:</div>
+                    <div class="quick-error-buttons">
+                        <select id="quick-error-type" class="quick-error-select">
+                            <option value="net">Net</option>
+                            <option value="out">Out</option>
+                            <option value="service">Service</option>
+                            <option value="double-hit">Double Hit</option>
+                            <option value="carry">Carry</option>
+                            <option value="obstruction">Obstruction</option>
+                            <option value="unforced">Unforced</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button class="btn btn-quick-error qa1" data-team="A" data-player="0">A1</button>
+                        <button class="btn btn-quick-error qa2" data-team="A" data-player="1">A2</button>
+                        <button class="btn btn-quick-error qb1" data-team="B" data-player="0">B1</button>
+                        <button class="btn btn-quick-error qb2" data-team="B" data-player="1">B2</button>
+                    </div>
+                    <div class="quick-error-names" id="quick-error-names"></div>
+                </div>
+
+                <details class="error-details">
+                    <summary>Manual Error Entry</summary>
+                    <div class="error-controls">
+                        <select id="error-team">
+                            <option value="A">Team A</option>
+                            <option value="B">Team B</option>
+                        </select>
+                        <select id="error-player">
+                            <option value="1">Player 1</option>
+                            <option value="2">Player 2</option>
+                        </select>
+                        <select id="error-type">
+                            <option value="net">Net Fault</option>
+                            <option value="out">Shot Out</option>
+                            <option value="service">Service Fault</option>
+                            <option value="double-hit">Double Hit</option>
+                            <option value="carry">Carry/Sling</option>
+                            <option value="obstruction">Obstruction</option>
+                            <option value="unforced">Unforced Error</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button class="btn btn-error" id="btn-record-error">Record Error</button>
+                    </div>
+                </details>
+
+                <div class="voice-controls">
+                    <button class="btn btn-voice" id="btn-voice-error">🎤 Voice Command</button>
+                    <span id="voice-status" class="voice-status"></span>
+                    <div id="voice-help" class="voice-help hidden">
+                        <strong>Say:</strong> "A1 net", "B2 out", "[player name] [error]", "point A", "point B"<br>
+                        <em>Shortcodes: A1, A2, B1, B2 = Team + Player</em>
+                    </div>
                 </div>
             </div>
 
@@ -173,13 +208,25 @@
             </div>
             <div id="history-list" class="history-list"></div>
             <div class="history-actions">
-                <button class="btn btn-error btn-sm" id="btn-clear-history">🗑 Clear All History</button>
+                <button class="btn btn-secondary btn-sm" id="btn-select-all-history">☑ Select All</button>
+                <button class="btn btn-secondary btn-sm" id="btn-export-history">📤 Export Selected</button>
+                <label class="btn btn-secondary btn-sm import-label">
+                    📥 Import
+                    <input type="file" id="btn-import-history" accept=".json" style="display:none;">
+                </label>
+                <button class="btn btn-error btn-sm" id="btn-clear-history">🗑 Clear All</button>
             </div>
         </section>
 
         <!-- Leaderboard Page -->
         <section id="leaderboard-page" class="section hidden">
             <h2>🏆 Player Leaderboard</h2>
+            <div class="leaderboard-filters">
+                <label>From: <input type="date" id="leaderboard-from" class="filter-input"></label>
+                <label>To: <input type="date" id="leaderboard-to" class="filter-input"></label>
+                <button class="btn btn-secondary btn-sm" id="btn-leaderboard-filter">Apply</button>
+                <button class="btn btn-secondary btn-sm" id="btn-leaderboard-clear">Clear</button>
+            </div>
             <div id="leaderboard-content" class="leaderboard-content"></div>
         </section>
     </div>
