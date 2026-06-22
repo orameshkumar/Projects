@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="description" content="ABC Provisional Store - Offline Billing PWA">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ABC Store">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>ABC Store</title>
+</head>
+<body>
+    <header class="app-header">
+        <h1 class="app-title">ABC Store</h1>
+    </header>
+
+    <main class="app-content">
+        <!-- Item Master Screen -->
+        <section id="item-master-screen" class="screen active" aria-label="Item Master">
+            <div class="screen-content">
+                <div id="item-list" class="item-list"></div>
+                <button id="add-item-btn" class="fab" aria-label="Add new item">+</button>
+            </div>
+        </section>
+
+        <!-- Billing Screen -->
+        <section id="billing-screen" class="screen" aria-label="Billing" hidden>
+            <div class="screen-content billing-layout">
+                <div class="billing-bottom">
+                    <h2 class="section-heading">Current Bill</h2>
+                    <div id="current-bill-items" class="bill-items-list"></div>
+                    <div class="bill-footer">
+                        <span class="bill-total-label">Total:</span>
+                        <span id="bill-total" class="bill-total-amount">₹0.00</span>
+                        <button id="finalize-bill-btn" class="btn-primary">Finalize Bill</button>
+                    </div>
+                </div>
+                <div class="billing-top">
+                    <div class="item-selector">
+                        <input type="search" id="billing-search" class="search-input" placeholder="Search items..." aria-label="Search items">
+                        <div id="billing-item-grid" class="item-grid"></div>
+                    </div>
+                    <div id="quick-entry-panel" class="quick-entry-panel">
+                        <button class="qty-btn" data-grams="50">50g</button>
+                        <button class="qty-btn" data-grams="100">100g</button>
+                        <button class="qty-btn" data-grams="250">250g</button>
+                        <button class="qty-btn" data-grams="500">500g</button>
+                        <button class="qty-btn" data-grams="750">750g</button>
+                        <button class="qty-btn" data-grams="1000">1KG</button>
+                        <input type="number" id="custom-qty" class="custom-qty-input" placeholder="Custom g" aria-label="Custom quantity in grams" min="1">
+                    </div>
+                    <button id="voice-btn" class="voice-btn" aria-label="Start voice billing">
+                        🎤
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Screen -->
+        <section id="history-screen" class="screen" aria-label="Bill History" hidden>
+            <div class="screen-content">
+                <div class="history-filters">
+                    <label for="history-date-from">From:</label>
+                    <input type="date" id="history-date-from" class="date-input">
+                    <label for="history-date-to">To:</label>
+                    <input type="date" id="history-date-to" class="date-input">
+                    <button id="history-filter-btn" class="btn-secondary">Filter</button>
+                </div>
+                <div id="history-list" class="history-list"></div>
+            </div>
+        </section>
+
+        <!-- Reports Screen -->
+        <section id="reports-screen" class="screen" aria-label="Reports" hidden>
+            <div class="screen-content">
+                <nav class="reports-sub-nav" aria-label="Report type navigation">
+                    <button class="report-tab active" data-report="total">Total</button>
+                    <button class="report-tab" data-report="day-wise">Day-wise</button>
+                    <button class="report-tab" data-report="item-wise">Item-wise</button>
+                </nav>
+                <div class="reports-date-range">
+                    <label for="report-date-from">From:</label>
+                    <input type="date" id="report-date-from" class="date-input">
+                    <label for="report-date-to">To:</label>
+                    <input type="date" id="report-date-to" class="date-input">
+                    <button id="report-generate-btn" class="btn-secondary">Generate</button>
+                </div>
+                <div id="report-content" class="report-content"></div>
+            </div>
+        </section>
+
+        <!-- Settings Screen -->
+        <section id="settings-screen" class="screen" aria-label="Settings" hidden>
+            <div class="screen-content">
+                <h2 class="section-heading" style="margin-bottom:12px;">UPI Payment Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="upi-id-input">UPI ID *</label>
+                        <input type="text" id="upi-id-input" placeholder="e.g., abcstore@upi" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="upi-name-input">Payee Name</label>
+                        <input type="text" id="upi-name-input" placeholder="e.g., ABC Provisional Store" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="upi-merchant-code-input">Merchant Code (optional)</label>
+                        <input type="text" id="upi-merchant-code-input" placeholder="e.g., 5411" autocomplete="off">
+                    </div>
+                    <button id="upi-save-btn" class="btn-primary" style="width:100%;margin-top:12px;">Save UPI Settings</button>
+                    <p id="upi-save-msg" style="color:#34a853;font-size:0.8rem;text-align:center;margin-top:8px;display:none;">Settings saved!</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+        <button class="nav-tab active" data-screen="item-master-screen" aria-current="page">
+            <span class="nav-icon">📦</span>
+            <span class="nav-label">Items</span>
+        </button>
+        <button class="nav-tab" data-screen="billing-screen">
+            <span class="nav-icon">🧾</span>
+            <span class="nav-label">Billing</span>
+        </button>
+        <button class="nav-tab" data-screen="history-screen">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">History</span>
+        </button>
+        <button class="nav-tab" data-screen="reports-screen">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Reports</span>
+        </button>
+        <button class="nav-tab" data-screen="settings-screen">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">Settings</span>
+        </button>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="js/qrcode-lib.js"></script>
+    <script src="js/qrcode.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/item-master.js"></script>
+    <script src="js/billing.js"></script>
+    <script src="js/voice-engine.js"></script>
+    <script src="js/bill-history.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
