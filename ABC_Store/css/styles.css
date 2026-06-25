@@ -1417,3 +1417,12 @@ body {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-light);
 }
+
+
+/* --- Quick Entry Panel Groups --- */
+.qty-panel-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}

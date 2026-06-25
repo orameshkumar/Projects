@@ -49,6 +49,10 @@ const BillHistory = (function () {
     if (startDate && endDate) {
       try {
         var bills = await DB.getBillsByDateRange(startDate, endDate);
+        // Sort by bill number ascending
+        bills.sort(function (a, b) {
+          return (a.billNumber || '').localeCompare(b.billNumber || '');
+        });
         renderBillList(bills);
       } catch (err) {
         console.error('Error filtering bills:', err);
@@ -63,11 +67,15 @@ const BillHistory = (function () {
   // ─── Load Bills ─────────────────────────────────────────────────────────────
 
   /**
-   * Loads all bills from DB and renders them (sorted by date desc).
+   * Loads all bills from DB and renders them (sorted by bill number ascending).
    */
   async function loadAndRenderBills() {
     try {
       var bills = await DB.getAllBills();
+      // Sort by bill number ascending (ABC-20250101-001, ABC-20250101-002, ...)
+      bills.sort(function (a, b) {
+        return (a.billNumber || '').localeCompare(b.billNumber || '');
+      });
       renderBillList(bills);
     } catch (err) {
       console.error('Error loading bills:', err);

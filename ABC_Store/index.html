@@ -47,17 +47,40 @@
                         <div id="billing-item-grid" class="item-grid"></div>
                     </div>
                     <div id="quick-entry-panel" class="quick-entry-panel">
-                        <button class="qty-btn" data-grams="50">50g</button>
-                        <button class="qty-btn" data-grams="100">100g</button>
-                        <button class="qty-btn" data-grams="250">250g</button>
-                        <button class="qty-btn" data-grams="500">500g</button>
-                        <button class="qty-btn" data-grams="750">750g</button>
-                        <button class="qty-btn" data-grams="1000">1KG</button>
-                        <input type="number" id="custom-qty" class="custom-qty-input" placeholder="Custom g" aria-label="Custom quantity in grams" min="1">
+                        <!-- KG buttons (default) -->
+                        <div id="qty-panel-kg" class="qty-panel-group">
+                            <button class="qty-btn" data-grams="50">50g</button>
+                            <button class="qty-btn" data-grams="100">100g</button>
+                            <button class="qty-btn" data-grams="250">250g</button>
+                            <button class="qty-btn" data-grams="500">500g</button>
+                            <button class="qty-btn" data-grams="750">750g</button>
+                            <button class="qty-btn" data-grams="1000">1KG</button>
+                        </div>
+                        <!-- Litre buttons -->
+                        <div id="qty-panel-litre" class="qty-panel-group" style="display:none;">
+                            <button class="qty-btn" data-grams="50">50ml</button>
+                            <button class="qty-btn" data-grams="100">100ml</button>
+                            <button class="qty-btn" data-grams="250">250ml</button>
+                            <button class="qty-btn" data-grams="500">500ml</button>
+                            <button class="qty-btn" data-grams="750">750ml</button>
+                            <button class="qty-btn" data-grams="1000">1L</button>
+                        </div>
+                        <!-- Count buttons -->
+                        <div id="qty-panel-count" class="qty-panel-group" style="display:none;">
+                            <button class="qty-btn" data-grams="1">1</button>
+                            <button class="qty-btn" data-grams="2">2</button>
+                            <button class="qty-btn" data-grams="3">3</button>
+                            <button class="qty-btn" data-grams="5">5</button>
+                            <button class="qty-btn" data-grams="6">6</button>
+                            <button class="qty-btn" data-grams="10">10</button>
+                            <button class="qty-btn" data-grams="12">12</button>
+                        </div>
+                        <input type="number" id="custom-qty" class="custom-qty-input" placeholder="Custom g" aria-label="Custom quantity" min="1">
                     </div>
                     <button id="voice-btn" class="voice-btn" aria-label="Start voice billing">
                         🎤
                     </button>
+                    <button id="barcode-scan-btn" class="btn-secondary" style="width:100%;margin-top:6px;font-size:0.75rem;min-height:36px;">📷 Scan Barcode</button>
                 </div>
             </div>
         </section>
@@ -98,10 +121,15 @@
         <!-- Settings Screen -->
         <section id="settings-screen" class="screen" aria-label="Settings" hidden>
             <div class="screen-content">
-                <h2 class="section-heading" style="margin-bottom:12px;">UPI Payment Settings</h2>
+                <h2 class="section-heading" style="margin-bottom:12px;">Store Settings</h2>
                 <div class="settings-form">
                     <div class="form-group">
-                        <label for="upi-id-input">UPI ID *</label>
+                        <label for="store-name-input">Store Name</label>
+                        <input type="text" id="store-name-input" placeholder="ABC Store" value="ABC Store" autocomplete="off">
+                    </div>
+                    <h2 class="section-heading" style="margin-bottom:12px;margin-top:20px;">UPI Payment Settings</h2>
+                    <div class="form-group">
+                        <label for="upi-id-input">UPI ID</label>
                         <input type="text" id="upi-id-input" placeholder="e.g., abcstore@upi" autocomplete="off">
                     </div>
                     <div class="form-group">
@@ -112,8 +140,17 @@
                         <label for="upi-merchant-code-input">Merchant Code (optional)</label>
                         <input type="text" id="upi-merchant-code-input" placeholder="e.g., 5411" autocomplete="off">
                     </div>
-                    <button id="upi-save-btn" class="btn-primary" style="width:100%;margin-top:12px;">Save UPI Settings</button>
+                    <button id="upi-save-btn" class="btn-primary" style="width:100%;margin-top:12px;">Save Settings</button>
                     <p id="upi-save-msg" style="color:#34a853;font-size:0.8rem;text-align:center;margin-top:8px;display:none;">Settings saved!</p>
+
+                    <h2 class="section-heading" style="margin-bottom:12px;margin-top:24px;">Barcode Reports</h2>
+                    <button id="print-item-barcodes-btn" class="btn-secondary" style="width:100%;margin-bottom:8px;">🖨️ Print Item Barcodes</button>
+                    <button id="print-qty-barcodes-btn" class="btn-secondary" style="width:100%;">🖨️ Print Quantity Barcodes</button>
+
+                    <h2 class="section-heading" style="margin-bottom:12px;margin-top:24px;">Import / Export Items</h2>
+                    <button id="export-items-btn" class="btn-secondary" style="width:100%;margin-bottom:8px;">📤 Export Items (CSV)</button>
+                    <button id="import-items-btn" class="btn-secondary" style="width:100%;">📥 Import Items (CSV)</button>
+                    <input type="file" id="import-file-input" accept=".csv" style="display:none;">
                 </div>
             </div>
         </section>
@@ -145,6 +182,7 @@
     <!-- Scripts -->
     <script src="js/qrcode-lib.js"></script>
     <script src="js/qrcode.js"></script>
+    <script src="js/jsbarcode.min.js"></script>
     <script src="js/db.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/settings.js"></script>
@@ -153,6 +191,8 @@
     <script src="js/voice-engine.js"></script>
     <script src="js/bill-history.js"></script>
     <script src="js/reports.js"></script>
+    <script src="js/barcode.js"></script>
+    <script src="js/import-export.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

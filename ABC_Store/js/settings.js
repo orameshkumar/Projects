@@ -1,20 +1,23 @@
 /**
- * settings.js - UPI Settings Module for ABC Provisional Store
+ * settings.js - Settings Module for ABC Provisional Store
  *
- * Stores and retrieves UPI payment settings from localStorage.
+ * Stores and retrieves store name, UPI payment settings from localStorage.
  * Provides UPI QR code generation after bill finalization.
+ * Updates app header/title with store name.
  */
 
 const Settings = (function () {
   'use strict';
 
   const STORAGE_KEY = 'abcstore_upi_settings';
+  const DEFAULT_STORE_NAME = 'ABC Store';
 
   // ─── Initialization ─────────────────────────────────────────────────────────
 
   /**
    * Initialize the Settings module.
-   * Loads saved settings into the form and sets up save button.
+   * Loads saved settings into the form, sets up save button,
+   * and applies store name to the UI.
    */
   function init() {
     var saveBtn = document.getElementById('upi-save-btn');
@@ -24,13 +27,45 @@ const Settings = (function () {
 
     // Load existing settings into form
     loadSettingsIntoForm();
+
+    // Apply store name to UI
+    applyStoreName();
+  }
+
+  // ─── Store Name ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get the store name from settings, or return default.
+   * @returns {string} Store name
+   */
+  function getStoreName() {
+    var settings = getSettings();
+    return (settings && settings.storeName) ? settings.storeName : DEFAULT_STORE_NAME;
+  }
+
+  /**
+   * Apply store name to all relevant UI elements:
+   * - App header title
+   * - Page title (browser tab)
+   */
+  function applyStoreName() {
+    var name = getStoreName();
+
+    // Update header banner
+    var titleEl = document.querySelector('.app-title');
+    if (titleEl) {
+      titleEl.textContent = name;
+    }
+
+    // Update browser tab title
+    document.title = name;
   }
 
   // ─── Load / Save ────────────────────────────────────────────────────────────
 
   /**
-   * Get saved UPI settings from localStorage.
-   * @returns {Object|null} { upiId, payeeName, merchantCode } or null
+   * Get saved settings from localStorage.
+   * @returns {Object|null} { storeName, upiId, payeeName, merchantCode } or null
    */
   function getSettings() {
     try {
@@ -45,27 +80,33 @@ const Settings = (function () {
   }
 
   /**
-   * Save UPI settings from form to localStorage.
+   * Save settings from form to localStorage.
    */
   function saveSettings() {
+    var storeName = document.getElementById('store-name-input');
     var upiId = document.getElementById('upi-id-input');
     var payeeName = document.getElementById('upi-name-input');
     var merchantCode = document.getElementById('upi-merchant-code-input');
     var msg = document.getElementById('upi-save-msg');
 
     var settings = {
+      storeName: storeName ? storeName.value.trim() : DEFAULT_STORE_NAME,
       upiId: upiId ? upiId.value.trim() : '',
       payeeName: payeeName ? payeeName.value.trim() : '',
       merchantCode: merchantCode ? merchantCode.value.trim() : ''
     };
 
-    if (!settings.upiId) {
-      alert('UPI ID is required.');
-      return;
+    // Store name defaults if left empty
+    if (!settings.storeName) {
+      settings.storeName = DEFAULT_STORE_NAME;
     }
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+
+      // Apply store name immediately
+      applyStoreName();
+
       if (msg) {
         msg.style.display = 'block';
         setTimeout(function () { msg.style.display = 'none'; }, 3000);
@@ -81,22 +122,22 @@ const Settings = (function () {
    */
   function loadSettingsIntoForm() {
     var settings = getSettings();
-    if (!settings) return;
 
+    var storeName = document.getElementById('store-name-input');
     var upiId = document.getElementById('upi-id-input');
     var payeeName = document.getElementById('upi-name-input');
     var merchantCode = document.getElementById('upi-merchant-code-input');
 
-    if (upiId) upiId.value = settings.upiId || '';
-    if (payeeName) payeeName.value = settings.payeeName || '';
-    if (merchantCode) merchantCode.value = settings.merchantCode || '';
+    if (storeName) storeName.value = (settings && settings.storeName) ? settings.storeName : DEFAULT_STORE_NAME;
+    if (upiId) upiId.value = (settings && settings.upiId) ? settings.upiId : '';
+    if (payeeName) payeeName.value = (settings && settings.payeeName) ? settings.payeeName : '';
+    if (merchantCode) merchantCode.value = (settings && settings.merchantCode) ? settings.merchantCode : '';
   }
 
   // ─── UPI QR Code Generation ─────────────────────────────────────────────────
 
   /**
    * Generate a UPI payment URL string.
-   * Format: upi://pay?pa=<UPI_ID>&pn=<NAME>&am=<AMOUNT>&cu=INR&tn=<NOTE>
    * @param {number} amount - Bill total amount
    * @param {string} billNumber - Bill number for the transaction note
    * @returns {string|null} UPI URL string, or null if UPI not configured
@@ -130,13 +171,13 @@ const Settings = (function () {
    */
   function showPaymentQR(amount, billNumber) {
     var upiUrl = generateUpiUrl(amount, billNumber);
-    if (!upiUrl) return; // UPI not configured, skip silently
+    if (!upiUrl) return;
 
-    // Remove existing QR modal if any
+    var storeName = getStoreName();
+
     var existing = document.getElementById('upi-qr-modal');
     if (existing) existing.remove();
 
-    // Create modal overlay
     var overlay = document.createElement('div');
     overlay.id = 'upi-qr-modal';
     overlay.className = 'modal-overlay';
@@ -144,7 +185,7 @@ const Settings = (function () {
     overlay.innerHTML =
       '<div class="modal" role="dialog" aria-labelledby="qr-modal-title" aria-modal="true">' +
         '<div class="modal-header">' +
-          '<h2 class="modal-title" id="qr-modal-title">UPI Payment</h2>' +
+          '<h2 class="modal-title" id="qr-modal-title">' + storeName + ' - Payment</h2>' +
           '<button class="modal-close" id="qr-modal-close" aria-label="Close">&times;</button>' +
         '</div>' +
         '<div class="modal-body" style="text-align:center;">' +
@@ -160,7 +201,6 @@ const Settings = (function () {
 
     document.body.appendChild(overlay);
 
-    // Render QR code
     var container = document.getElementById('upi-qr-canvas-container');
     if (container && typeof QRCode !== 'undefined') {
       QRCode.toCanvas(container, upiUrl, { width: 200, margin: 2 }, function (error) {
@@ -173,12 +213,10 @@ const Settings = (function () {
       container.innerHTML = '<p style="color:#ea4335;font-size:0.8rem;">QR library not loaded</p>';
     }
 
-    // Show modal with animation
     requestAnimationFrame(function () {
       overlay.classList.add('active');
     });
 
-    // Close handlers
     document.getElementById('qr-modal-close').addEventListener('click', function () {
       closeQrModal(overlay);
     });
@@ -190,9 +228,6 @@ const Settings = (function () {
     });
   }
 
-  /**
-   * Close and remove the QR modal.
-   */
   function closeQrModal(overlay) {
     overlay.classList.remove('active');
     setTimeout(function () {
@@ -205,6 +240,7 @@ const Settings = (function () {
   return {
     init: init,
     getSettings: getSettings,
+    getStoreName: getStoreName,
     generateUpiUrl: generateUpiUrl,
     showPaymentQR: showPaymentQR
   };

@@ -128,7 +128,7 @@ const ItemMaster = (function () {
           thumbHtml +
           '<div class="item-info">' +
             '<div class="item-name">' + _escapeHtml(item.name) + '</div>' +
-            '<div class="item-price">₹' + Number(item.basePricePerKg).toFixed(2) + ' / KG</div>' +
+            '<div class="item-price" style="font-size:0.7rem;color:#5f6368;">' + _escapeHtml(item.itemCode || '') + ' | ₹' + Number(item.basePricePerKg).toFixed(2) + '/' + _unitLabel(item.baseUnit) + '</div>' +
           '</div>' +
           '<button class="item-edit-btn" data-item-id="' + item.id + '" aria-label="Edit ' + _escapeHtml(item.name) + '">✏️</button>' +
           '<button class="item-delete-btn" data-item-id="' + item.id + '" aria-label="Delete ' + _escapeHtml(item.name) + '">🗑️</button>' +
@@ -184,8 +184,10 @@ const ItemMaster = (function () {
 
     var title = item ? 'Edit Item' : 'Add Item';
     var nameVal = item ? _escapeAttr(item.name) : '';
+    var itemCodeVal = item ? _escapeAttr(item.itemCode || '') : _generateItemCode();
     var priceVal = item ? item.basePricePerKg : '';
     var voiceTagVal = item ? _escapeAttr(item.voiceTag || '') : '';
+    var baseUnit = item ? (item.baseUnit || 'kg') : 'kg';
 
     var imagePreviewHtml;
     if (capturedImageBase64) {
@@ -193,6 +195,8 @@ const ItemMaster = (function () {
     } else {
       imagePreviewHtml = '<div id="item-image-preview" style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;background:#e8eaed;border-radius:4px;margin-top:8px;font-size:1.5rem;color:#5f6368;">📷</div>';
     }
+
+    var priceLabel = baseUnit === 'count' ? 'Price per Unit (₹) *' : (baseUnit === 'litre' ? 'Base Price per Litre (₹) *' : 'Base Price per KG (₹) *');
 
     modalOverlay.innerHTML =
       '<div class="modal" role="dialog" aria-labelledby="item-modal-title" aria-modal="true">' +
@@ -207,8 +211,21 @@ const ItemMaster = (function () {
             '<span id="item-name-error" style="color:#ea4335;font-size:0.75rem;display:none;margin-top:4px;">Item name is required</span>' +
           '</div>' +
           '<div class="form-group">' +
-            '<label for="item-price-input">Base Price per KG (₹) *</label>' +
-            '<input type="number" id="item-price-input" placeholder="Enter price per KG" value="' + priceVal + '" min="0" step="0.01">' +
+            '<label for="item-code-input">Item Code (unique, auto-generated)</label>' +
+            '<input type="text" id="item-code-input" placeholder="e.g., ITM001" value="' + itemCodeVal + '" autocomplete="off">' +
+            '<span id="item-code-error" style="color:#ea4335;font-size:0.75rem;display:none;margin-top:4px;"></span>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="item-unit-select">Base Unit *</label>' +
+            '<select id="item-unit-select" style="width:100%;padding:10px 12px;border:1.5px solid #dadce0;border-radius:8px;font-size:0.875rem;min-height:44px;background:#fff;">' +
+              '<option value="kg"' + (baseUnit === 'kg' ? ' selected' : '') + '>Kilogram (KG)</option>' +
+              '<option value="litre"' + (baseUnit === 'litre' ? ' selected' : '') + '>Litre (L)</option>' +
+              '<option value="count"' + (baseUnit === 'count' ? ' selected' : '') + '>Count (Nos)</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="item-price-input" id="item-price-label">' + priceLabel + '</label>' +
+            '<input type="number" id="item-price-input" placeholder="Enter price" value="' + priceVal + '" min="0" step="0.01">' +
             '<span id="item-price-error" style="color:#ea4335;font-size:0.75rem;display:none;margin-top:4px;">Base price is required</span>' +
           '</div>' +
           '<div class="form-group">' +
@@ -255,6 +272,7 @@ const ItemMaster = (function () {
     var saveBtn = document.getElementById('item-modal-save');
     var captureBtn = document.getElementById('item-capture-btn');
     var fileInput = document.getElementById('item-image-file-input');
+    var unitSelect = document.getElementById('item-unit-select');
 
     if (closeBtn) {
       closeBtn.addEventListener('click', closeModal);
@@ -270,6 +288,16 @@ const ItemMaster = (function () {
     }
     if (fileInput) {
       fileInput.addEventListener('change', _handleFileSelected);
+    }
+    if (unitSelect) {
+      unitSelect.addEventListener('change', function () {
+        var label = document.getElementById('item-price-label');
+        if (!label) return;
+        var unit = unitSelect.value;
+        if (unit === 'count') label.textContent = 'Price per Unit (₹) *';
+        else if (unit === 'litre') label.textContent = 'Base Price per Litre (₹) *';
+        else label.textContent = 'Base Price per KG (₹) *';
+      });
     }
 
     // Close on overlay background click
@@ -457,17 +485,23 @@ const ItemMaster = (function () {
    */
   async function _handleSave() {
     var nameInput = document.getElementById('item-name-input');
+    var itemCodeInput = document.getElementById('item-code-input');
     var priceInput = document.getElementById('item-price-input');
     var voiceTagInput = document.getElementById('item-voicetag-input');
+    var unitSelect = document.getElementById('item-unit-select');
     var nameError = document.getElementById('item-name-error');
+    var codeError = document.getElementById('item-code-error');
     var priceError = document.getElementById('item-price-error');
 
     var name = nameInput ? nameInput.value.trim() : '';
+    var itemCode = itemCodeInput ? itemCodeInput.value.trim().toUpperCase() : '';
     var price = priceInput ? parseFloat(priceInput.value) : NaN;
     var voiceTag = voiceTagInput ? voiceTagInput.value.trim() : '';
+    var baseUnit = unitSelect ? unitSelect.value : 'kg';
 
     // Reset errors
     if (nameError) nameError.style.display = 'none';
+    if (codeError) codeError.style.display = 'none';
     if (priceError) priceError.style.display = 'none';
 
     // Validate
@@ -478,6 +512,11 @@ const ItemMaster = (function () {
       valid = false;
     }
 
+    if (!itemCode) {
+      if (codeError) { codeError.textContent = 'Item code is required'; codeError.style.display = 'block'; }
+      valid = false;
+    }
+
     if (isNaN(price) || price <= 0 || priceInput.value.trim() === '') {
       if (priceError) priceError.style.display = 'block';
       valid = false;
@@ -485,28 +524,48 @@ const ItemMaster = (function () {
 
     if (!valid) return;
 
+    // Check uniqueness of item code
+    var duplicateItem = allItems.find(function (i) {
+      return i.itemCode && i.itemCode.toUpperCase() === itemCode && i.id !== editingItemId;
+    });
+    if (duplicateItem) {
+      if (codeError) { codeError.textContent = 'Item code "' + itemCode + '" already exists (' + duplicateItem.name + ')'; codeError.style.display = 'block'; }
+      return;
+    }
+
     var now = new Date().toISOString();
 
     try {
       if (editingItemId) {
-        // Update existing item
+        // Check if item code changed — update bills if so
         var existingItem = allItems.find(function (i) { return i.id === editingItemId; });
+        var oldCode = existingItem ? (existingItem.itemCode || '') : '';
+
         var updatedItem = {
           id: editingItemId,
           name: name,
+          itemCode: itemCode,
           basePricePerKg: price,
+          baseUnit: baseUnit,
           voiceTag: voiceTag,
           imageBase64: capturedImageBase64 || (existingItem ? existingItem.imageBase64 : null),
           createdAt: existingItem ? existingItem.createdAt : now,
           updatedAt: now
         };
         await DB.updateItem(updatedItem);
+
+        // If item code changed, update all bills referencing this item
+        if (oldCode && oldCode !== itemCode) {
+          await _updateBillsItemCode(editingItemId, name, itemCode);
+        }
       } else {
         // Add new item
         var newItem = {
           id: Utils.generateId(),
           name: name,
+          itemCode: itemCode,
           basePricePerKg: price,
+          baseUnit: baseUnit,
           voiceTag: voiceTag,
           imageBase64: capturedImageBase64 || null,
           createdAt: now,
@@ -524,7 +583,69 @@ const ItemMaster = (function () {
     }
   }
 
+  // ─── Item Code Helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Generate a unique item code. Format: ITM + 3-digit sequential number.
+   * Scans existing items to find the next available number.
+   * @returns {string} Generated item code e.g., "ITM001"
+   */
+  function _generateItemCode() {
+    var maxNum = 0;
+    allItems.forEach(function (item) {
+      if (item.itemCode) {
+        var match = item.itemCode.match(/^ITM(\d+)$/i);
+        if (match) {
+          var num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    });
+    return 'ITM' + String(maxNum + 1).padStart(3, '0');
+  }
+
+  /**
+   * Update all bills that reference an item when its code changes.
+   * @param {string} itemId - The item's internal ID
+   * @param {string} newName - New item name
+   * @param {string} newCode - New item code
+   */
+  async function _updateBillsItemCode(itemId, newName, newCode) {
+    try {
+      var bills = await DB.getAllBills();
+      for (var i = 0; i < bills.length; i++) {
+        var bill = bills[i];
+        var updated = false;
+        if (bill.lineItems) {
+          bill.lineItems.forEach(function (li) {
+            if (li.itemId === itemId) {
+              li.itemName = newName;
+              li.itemCode = newCode;
+              updated = true;
+            }
+          });
+        }
+        if (updated) {
+          await DB.saveBill(bill);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update bills with new item code:', e);
+    }
+  }
+
   // ─── Delete Item ─────────────────────────────────────────────────────────────
+
+  /**
+   * Returns display label for base unit.
+   * @param {string} unit - 'kg', 'litre', or 'count'
+   * @returns {string} Display label
+   */
+  function _unitLabel(unit) {
+    if (unit === 'litre') return 'L';
+    if (unit === 'count') return 'Nos';
+    return 'KG';
+  }
 
   /**
    * Handles deleting an item after user confirmation.

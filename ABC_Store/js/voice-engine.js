@@ -199,6 +199,9 @@ const VoiceEngine = (function () {
     var transcript = result[0].transcript;
     console.log('VoiceEngine: Transcript:', transcript);
 
+    // Show raw transcript to user for debugging (no background color)
+    showNotification('Heard: "' + transcript.trim() + '"', 'neutral');
+
     // Parse the voice command
     var parsed = await parseVoiceCommand(transcript);
 
@@ -208,6 +211,13 @@ const VoiceEngine = (function () {
         var pair = parsed.recognized[i];
         await Billing.addItemById(pair.itemId, pair.quantityGrams);
       }
+      // Show success notification in green
+      var matchedNames = parsed.recognized.map(function (p) {
+        var item = null;
+        try { item = document.querySelector('[data-item-id="' + p.itemId + '"]'); } catch(e) {}
+        return p.quantityGrams + 'g';
+      });
+      showNotification('✓ Added ' + parsed.recognized.length + ' item(s) to bill', 'success');
     }
 
     // 6.6: Show unrecognized segments
@@ -245,22 +255,40 @@ const VoiceEngine = (function () {
       return { recognized: [], unrecognized: [normalized] };
     }
 
-    // Filter items that have voice tags, sort by tag length descending (longer tags first)
-    var taggedItems = items
-      .filter(function (item) { return item.voiceTag && item.voiceTag.trim(); })
-      .map(function (item) {
-        return { id: item.id, name: item.name, tag: item.voiceTag.toLowerCase().trim() };
-      })
-      .sort(function (a, b) { return b.tag.length - a.tag.length; });
+    // Build searchable tags from both voice tag AND item name (lowercase)
+    var taggedItems = [];
+    items.forEach(function (item) {
+      var tags = [];
+      // Add voice tag if available
+      if (item.voiceTag && item.voiceTag.trim()) {
+        tags.push(item.voiceTag.toLowerCase().trim());
+      }
+      // Also add item name as a matchable tag
+      if (item.name && item.name.trim()) {
+        var nameLower = item.name.toLowerCase().trim();
+        // Only add name if it's different from voice tag
+        if (tags.indexOf(nameLower) === -1) {
+          tags.push(nameLower);
+        }
+      }
+      tags.forEach(function (tag) {
+        taggedItems.push({ id: item.id, name: item.name, tag: tag });
+      });
+    });
+
+    // Sort by tag length descending (longer tags first to avoid partial matches)
+    taggedItems.sort(function (a, b) { return b.tag.length - a.tag.length; });
 
     if (taggedItems.length === 0) {
       return { recognized: [], unrecognized: [normalized] };
     }
 
     // Find all voice tag matches and their positions in the transcript
+    // Uses both exact matching and fuzzy matching for speech recognition errors
     var matches = [];
     var workingText = normalized;
 
+    // First pass: exact matches
     taggedItems.forEach(function (item) {
       var searchFrom = 0;
       var idx;
@@ -280,6 +308,50 @@ const VoiceEngine = (function () {
         searchFrom = idx + 1;
       }
     });
+
+    // Second pass: fuzzy matching for words not matched exactly
+    // Split transcript into words and try to match each against tags using similarity
+    if (matches.length === 0 || _hasUnmatchedGaps(normalized, matches)) {
+      var words = normalized.split(/\s+/);
+      var charPos = 0;
+
+      for (var wi = 0; wi < words.length; wi++) {
+        var word = words[wi];
+        var wordStart = normalized.indexOf(word, charPos);
+        var wordEnd = wordStart + word.length;
+        charPos = wordEnd;
+
+        // Skip if this word position is already covered by an exact match
+        var alreadyMatched = matches.some(function (m) {
+          return wordStart >= m.startIndex && wordStart < m.endIndex;
+        });
+        if (alreadyMatched) continue;
+
+        // Try fuzzy match against all tags
+        for (var ti = 0; ti < taggedItems.length; ti++) {
+          var tag = taggedItems[ti].tag;
+          var similarity = calculateSimilarity(word, tag);
+
+          // Accept match if similarity >= 70% and word length is at least 3
+          if (similarity >= 0.7 && word.length >= 3) {
+            // Check this item isn't already matched at this position
+            var duplicate = matches.some(function (m) {
+              return m.itemId === taggedItems[ti].id && Math.abs(m.startIndex - wordStart) < 3;
+            });
+            if (!duplicate) {
+              matches.push({
+                itemId: taggedItems[ti].id,
+                itemName: taggedItems[ti].name,
+                tag: taggedItems[ti].tag,
+                startIndex: wordStart,
+                endIndex: wordEnd
+              });
+              break; // First good match wins for this word
+            }
+          }
+        }
+      }
+    }
 
     // Sort matches by position in transcript
     matches.sort(function (a, b) { return a.startIndex - b.startIndex; });
@@ -307,6 +379,9 @@ const VoiceEngine = (function () {
 
       var grams = parseQuantityToGrams(qtyText);
 
+      // Approximate to nearest standard quantity if close
+      grams = approximateQuantity(grams);
+
       if (grams > 0) {
         recognized.push({ itemId: match.itemId, quantityGrams: grams });
       } else {
@@ -331,7 +406,76 @@ const VoiceEngine = (function () {
     return { recognized: recognized, unrecognized: unrecognized };
   }
 
-  // ─── 6.4: Quantity Word-to-Grams Conversion ────────────────────────────────
+  // ─── 6.4: Quantity Approximation & Word-to-Grams Conversion ─────────────────
+
+  /**
+   * Standard quantities used in the store (in grams).
+   */
+  var STANDARD_QUANTITIES = [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 750, 800, 900, 1000, 1500, 2000];
+
+  /**
+   * Approximate a parsed quantity to the nearest standard quantity.
+   * Uses a 15% tolerance — if the parsed value is within 15% of a standard
+   * quantity, snap to that standard value. Otherwise keep the original.
+   *
+   * Examples:
+   *   95 → 100 (within 15% of 100)
+   *   108 → 100 (within 15% of 100)
+   *   480 → 500 (within 15% of 500)
+   *   520 → 500 (within 15% of 500)
+   *   730 → 750 (within 15% of 750)
+   *   200 → 200 (exact match)
+   *   333 → 333 (not close to any standard, keep as-is)
+   *
+   * @param {number} grams - Raw parsed quantity in grams
+   * @returns {number} Approximated quantity
+   */
+  function approximateQuantity(grams) {
+    if (grams <= 0) return grams;
+
+    var TOLERANCE = 0.15; // 15%
+    var closest = grams;
+    var closestDiff = Infinity;
+
+    for (var i = 0; i < STANDARD_QUANTITIES.length; i++) {
+      var std = STANDARD_QUANTITIES[i];
+      var diff = Math.abs(grams - std);
+      var threshold = std * TOLERANCE;
+
+      if (diff <= threshold && diff < closestDiff) {
+        closest = std;
+        closestDiff = diff;
+      }
+    }
+
+    return closest;
+  }
+
+  /**
+   * Normalize misspelled/misheard unit words to standard forms.
+   * Speech recognition often produces variants like "graam", "grm", "ggram", "kgs", "keji" etc.
+   *
+   * Matches common variants of:
+   *   gram/grams → "gram"
+   *   kg/kilo/kilogram → "kg"
+   *
+   * @param {string} text - The quantity text to normalize
+   * @returns {string} Text with units normalized
+   */
+  function normalizeUnits(text) {
+    // Variants of "gram" — covers: graam, grm, ggram, gramm, grahm, garm, grams, gramms, grms
+    text = text.replace(/\b(g+r+a*m+s?|gr+m+s?|gra+ms?|gra+h?ms?|gar?ms?|gra+m+s?)\b/g, 'gram');
+
+    // Variants of "kg" — covers: kgs, keji, kj, keg, kge, kgm, kilo, kilos, kilogram, kilograms
+    text = text.replace(/\b(k+g+s?|k+e+g|k+g+e|k+g+m|ke+ji|k+j)\b/g, 'kg');
+    text = text.replace(/\b(kilo+s?|kilo+gra+m+s?)\b/g, 'kg');
+
+    // Single "g" at word boundary after a number (e.g., "100 g" or "100g")
+    // Already handled by parseQuantityToGrams regex, but normalize for safety
+    text = text.replace(/(\d)\s*g\b/g, '$1 gram');
+
+    return text;
+  }
 
   /**
    * Parse a quantity string and convert to grams.
@@ -355,6 +499,9 @@ const VoiceEngine = (function () {
       .replace(/\s+/g, ' ');
 
     if (!cleaned) return 0;
+
+    // Fuzzy unit normalization: fix misspelled/misheard unit words
+    cleaned = normalizeUnits(cleaned);
 
     // ─── Direct phrase matching (highest priority) ─────────────────────
 
@@ -518,7 +665,7 @@ const VoiceEngine = (function () {
    */
   function showUnrecognizedSegments(segments) {
     var message = 'Could not recognize: "' + segments.join('", "') + '"';
-    showNotification(message);
+    showNotification(message, 'error');
   }
 
   /**
@@ -526,7 +673,7 @@ const VoiceEngine = (function () {
    * Creates or reuses a notification div below #voice-btn.
    * @param {string} message - The message to display
    */
-  function showNotification(message) {
+  function showNotification(message, type) {
     var notifId = 'voice-notification';
     var notif = document.getElementById(notifId);
 
@@ -555,11 +702,96 @@ const VoiceEngine = (function () {
     notif.textContent = message;
     notif.classList.add('visible');
 
+    // Set background color based on type
+    if (type === 'success') {
+      notif.style.backgroundColor = '#34a853';
+      notif.style.color = '#fff';
+    } else if (type === 'error') {
+      notif.style.backgroundColor = '#ea4335';
+      notif.style.color = '#fff';
+    } else if (type === 'neutral') {
+      notif.style.backgroundColor = '#f5f5f5';
+      notif.style.color = '#5f6368';
+    } else {
+      notif.style.backgroundColor = '#f5f5f5';
+      notif.style.color = '#5f6368';
+    }
+
     // Auto-hide after 5 seconds
     clearTimeout(notif._hideTimeout);
     notif._hideTimeout = setTimeout(function () {
       notif.classList.remove('visible');
     }, 5000);
+  }
+
+  // ─── Fuzzy String Matching Helpers ──────────────────────────────────────────
+
+  /**
+   * Calculate similarity between two strings (0 to 1).
+   * Uses Levenshtein distance normalized by the longer string's length.
+   * 1.0 = identical, 0.0 = completely different.
+   *
+   * @param {string} a - First string
+   * @param {string} b - Second string
+   * @returns {number} Similarity score between 0 and 1
+   */
+  function calculateSimilarity(a, b) {
+    if (a === b) return 1.0;
+    if (!a || !b) return 0.0;
+
+    var distance = levenshteinDistance(a, b);
+    var maxLen = Math.max(a.length, b.length);
+    return 1.0 - (distance / maxLen);
+  }
+
+  /**
+   * Calculate Levenshtein edit distance between two strings.
+   * @param {string} a - First string
+   * @param {string} b - Second string
+   * @returns {number} Edit distance
+   */
+  function levenshteinDistance(a, b) {
+    var m = a.length;
+    var n = b.length;
+
+    // Create distance matrix
+    var d = [];
+    for (var i = 0; i <= m; i++) {
+      d[i] = [i];
+    }
+    for (var j = 0; j <= n; j++) {
+      d[0][j] = j;
+    }
+
+    for (var i = 1; i <= m; i++) {
+      for (var j = 1; j <= n; j++) {
+        var cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        d[i][j] = Math.min(
+          d[i - 1][j] + 1,       // deletion
+          d[i][j - 1] + 1,       // insertion
+          d[i - 1][j - 1] + cost // substitution
+        );
+      }
+    }
+
+    return d[m][n];
+  }
+
+  /**
+   * Check if there are unmatched gaps in the transcript.
+   * @param {string} text - Full normalized transcript
+   * @param {Array} matches - Current matches array
+   * @returns {boolean} True if there are words not covered by matches
+   */
+  function _hasUnmatchedGaps(text, matches) {
+    if (matches.length === 0) return true;
+    var words = text.split(/\s+/);
+    var coveredChars = 0;
+    matches.forEach(function (m) {
+      coveredChars += (m.endIndex - m.startIndex);
+    });
+    // If less than half the transcript is covered by matches, try fuzzy
+    return coveredChars < text.length * 0.5;
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────

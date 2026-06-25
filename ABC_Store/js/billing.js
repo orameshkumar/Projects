@@ -94,6 +94,25 @@ const Billing = (function () {
   // ─── Item Grid (5.1, 5.2) ──────────────────────────────────────────────────
 
   /**
+   * Switch the visible quick entry panel based on item unit type.
+   * @param {string} unit - 'kg', 'litre', or 'count'
+   */
+  function switchQtyPanel(unit) {
+    var kgPanel = document.getElementById('qty-panel-kg');
+    var litrePanel = document.getElementById('qty-panel-litre');
+    var countPanel = document.getElementById('qty-panel-count');
+
+    if (kgPanel) kgPanel.style.display = (unit === 'kg') ? 'flex' : 'none';
+    if (litrePanel) litrePanel.style.display = (unit === 'litre') ? 'flex' : 'none';
+    if (countPanel) countPanel.style.display = (unit === 'count') ? 'flex' : 'none';
+
+    // Clear active state from all qty buttons when switching panels
+    qtyButtons.forEach(function (b) { b.classList.remove('active'); });
+    selectedQuantityGrams = null;
+    if (customQtyInput) customQtyInput.value = '';
+  }
+
+  /**
    * Render items as selectable cards in the item grid.
    * @param {Array} items - Array of item objects to display
    */
@@ -126,7 +145,8 @@ const Billing = (function () {
   }
 
   /**
-   * Handle search input to filter items.
+   * Handle search input to filter items by name, voice tag, or item code.
+   * Auto-selects the item if only one result matches.
    */
   function onSearchInput() {
     var query = searchInput.value.trim().toLowerCase();
@@ -136,9 +156,30 @@ const Billing = (function () {
     }
     var filtered = allItems.filter(function (item) {
       return item.name.toLowerCase().indexOf(query) !== -1
-        || (item.voiceTag && item.voiceTag.toLowerCase().indexOf(query) !== -1);
+        || (item.voiceTag && item.voiceTag.toLowerCase().indexOf(query) !== -1)
+        || (item.itemCode && item.itemCode.toLowerCase().indexOf(query) !== -1);
     });
     renderItemGrid(filtered);
+
+    // Auto-select if exactly one item matches
+    if (filtered.length === 1) {
+      selectedItemId = filtered[0].id;
+      // Update visual state
+      itemGrid.querySelectorAll('.item-card').forEach(function (c) {
+        c.classList.add('selected');
+        c.setAttribute('aria-pressed', 'true');
+      });
+      // Update placeholder for unit type
+      var item = filtered[0];
+      if (customQtyInput) {
+        if (item.baseUnit === 'count') customQtyInput.placeholder = 'Qty (nos)';
+        else if (item.baseUnit === 'litre') customQtyInput.placeholder = 'ml';
+        else customQtyInput.placeholder = 'Custom g';
+      }
+      switchQtyPanel(item.baseUnit || 'kg');
+      // Try to auto-add if quantity is already selected
+      tryAutoAdd();
+    }
   }
 
   /**
@@ -161,6 +202,23 @@ const Billing = (function () {
       c.classList.toggle('selected', isSelected);
       c.setAttribute('aria-pressed', isSelected);
     });
+
+    // Update placeholder and quick entry panel based on item unit type
+    if (selectedItemId && customQtyInput) {
+      var item = allItems.find(function (i) { return i.id === selectedItemId; });
+      var unit = (item && item.baseUnit) || 'kg';
+      if (unit === 'count') {
+        customQtyInput.placeholder = 'Qty (nos)';
+      } else if (unit === 'litre') {
+        customQtyInput.placeholder = 'ml';
+      } else {
+        customQtyInput.placeholder = 'Custom g';
+      }
+      switchQtyPanel(unit);
+    } else {
+      if (customQtyInput) customQtyInput.placeholder = 'Custom g';
+      switchQtyPanel('kg');
+    }
 
     // Try to auto-add if both item and quantity are selected
     tryAutoAdd();
@@ -225,23 +283,34 @@ const Billing = (function () {
 
     addLineItem(item, selectedQuantityGrams);
 
-    // Reset selections after adding
+    // Reset item selection (keep quantity)
     resetSelection();
   }
 
   /**
    * Add a line item to the current bill.
+   * Handles different base units: kg (grams), litre (ml), count (nos).
    * @param {Object} item - The item object from DB
-   * @param {number} quantityGrams - Quantity in grams
+   * @param {number} quantity - Quantity in grams/ml for kg/litre, or count for count items
    */
-  function addLineItem(item, quantityGrams) {
-    var lineTotal = Utils.calculateLineTotal(item.basePricePerKg, quantityGrams);
+  function addLineItem(item, quantity) {
+    var baseUnit = item.baseUnit || 'kg';
+    var lineTotal;
+
+    if (baseUnit === 'count') {
+      // For count items: price = basePrice × quantity (quantity is number of units)
+      lineTotal = Math.round(item.basePricePerKg * quantity * 100) / 100;
+    } else {
+      // For kg/litre items: price = basePrice × quantity / 1000
+      lineTotal = Utils.calculateLineTotal(item.basePricePerKg, quantity);
+    }
 
     var lineItem = {
       id: Utils.generateId(),
       itemId: item.id,
       itemName: item.name,
-      quantityGrams: quantityGrams,
+      baseUnit: baseUnit,
+      quantityGrams: quantity,
       pricePerKg: item.basePricePerKg,
       lineTotal: lineTotal,
       priceOverridden: false
@@ -258,7 +327,13 @@ const Billing = (function () {
   function resetSelection() {
     selectedItemId = null;
 
-    // Clear item highlights only — keep quantity selection
+    // Clear search text and reset item grid
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    renderItemGrid(allItems);
+
+    // Clear item highlights — keep quantity selection
     if (itemGrid) {
       itemGrid.querySelectorAll('.item-card').forEach(function (c) {
         c.classList.remove('selected');
@@ -268,6 +343,27 @@ const Billing = (function () {
   }
 
   // ─── Bill Line Item Display (5.5) ──────────────────────────────────────────
+
+  /**
+   * Format quantity display for a bill line item based on its base unit.
+   * @param {Object} lineItem - Line item with baseUnit and quantityGrams
+   * @returns {string} Formatted display string
+   */
+  function formatBillQuantity(lineItem) {
+    var unit = lineItem.baseUnit || 'kg';
+    if (unit === 'count') {
+      return lineItem.quantityGrams + ' Nos';
+    } else if (unit === 'litre') {
+      if (lineItem.quantityGrams >= 1000) {
+        var litres = lineItem.quantityGrams / 1000;
+        var display = litres % 1 === 0 ? litres.toFixed(0) : litres.toFixed(1);
+        return display + ' L';
+      }
+      return lineItem.quantityGrams + 'ml';
+    } else {
+      return Utils.formatQuantity(lineItem.quantityGrams);
+    }
+  }
 
   /**
    * Render all current bill line items in the scrollable list.
@@ -281,7 +377,7 @@ const Billing = (function () {
     }
 
     billItemsList.innerHTML = currentBillItems.map(function (lineItem, index) {
-      var qtyDisplay = Utils.formatQuantity(lineItem.quantityGrams);
+      var qtyDisplay = formatBillQuantity(lineItem);
       var priceDisplay = Utils.formatCurrency(lineItem.lineTotal);
 
       return '<div class="bill-line-item" data-line-id="' + lineItem.id + '">'
@@ -335,20 +431,34 @@ const Billing = (function () {
     var lineItem = currentBillItems.find(function (li) { return li.id === lineId; });
     if (!lineItem) return;
 
-    var newQty = prompt('Enter new quantity in grams:', lineItem.quantityGrams);
-    if (newQty === null) return; // cancelled
+    var unit = lineItem.baseUnit || 'kg';
+    var promptLabel = unit === 'count' ? 'Enter quantity (number of units):' :
+                      unit === 'litre' ? 'Enter quantity in ml:' :
+                      'Enter new quantity in grams:';
 
-    newQty = parseInt(newQty, 10);
+    var newQty = prompt(promptLabel, lineItem.quantityGrams);
+    if (newQty === null) return;
+
+    newQty = parseFloat(newQty);
     if (!newQty || newQty <= 0) {
       alert('Please enter a valid positive quantity.');
       return;
+    }
+
+    // For count items, ensure whole numbers
+    if (unit === 'count') {
+      newQty = Math.round(newQty);
     }
 
     lineItem.quantityGrams = newQty;
 
     // Recalculate price only if not manually overridden
     if (!lineItem.priceOverridden) {
-      lineItem.lineTotal = Utils.calculateLineTotal(lineItem.pricePerKg, newQty);
+      if (unit === 'count') {
+        lineItem.lineTotal = Math.round(lineItem.pricePerKg * newQty * 100) / 100;
+      } else {
+        lineItem.lineTotal = Utils.calculateLineTotal(lineItem.pricePerKg, newQty);
+      }
     }
 
     renderBillItems();

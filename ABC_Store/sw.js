@@ -1,5 +1,5 @@
 // Service Worker for ABC Provisional Store PWA
-const CACHE_NAME = 'abc-store-v4';
+const CACHE_NAME = 'abc-store-v13';
 
 // Application assets to pre-cache during install
 const ASSETS_TO_CACHE = [
@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
   './css/styles.css',
   './js/qrcode-lib.js',
   './js/qrcode.js',
+  './js/jsbarcode.min.js',
   './js/app.js',
   './js/db.js',
   './js/utils.js',
@@ -17,6 +18,8 @@ const ASSETS_TO_CACHE = [
   './js/voice-engine.js',
   './js/bill-history.js',
   './js/reports.js',
+  './js/barcode.js',
+  './js/import-export.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'

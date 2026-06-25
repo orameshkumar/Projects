@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4285f4">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/logo.svg">
+  <link rel="apple-touch-icon" href="icons/logo.svg">
+  <title>Speech Translator</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- App Shell -->
+  <div class="app-container">
+
+    <!-- Header with branding and theme toggle -->
+    <header class="app-header">
+      <div class="header-left">
+        <img src="icons/logo.svg" alt="Speech Translator" class="app-logo">
+        <h1 class="app-title">Speech Translator</h1>
+      </div>
+      <button id="theme-toggle" type="button" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+        <span class="icon-sun">☀️</span>
+        <span class="icon-moon">🌙</span>
+      </button>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Language Selection Card -->
+      <section class="card language-card">
+        <div class="card-label">Languages</div>
+        <div class="language-selector">
+          <div class="lang-dropdown-wrap">
+            <label for="source-lang" class="lang-label-sm">From</label>
+            <select id="source-lang" aria-label="Source language">
+              <option value="">Select source</option>
+            </select>
+          </div>
+          <button id="swap-btn" type="button" class="swap-btn" aria-label="Swap languages">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17 1 21 5 17 9"></polyline>
+              <path d="M3 11V9a4 4 0 014-4h14"></path>
+              <polyline points="7 23 3 19 7 15"></polyline>
+              <path d="M21 13v2a4 4 0 01-4 4H3"></path>
+            </svg>
+          </button>
+          <div class="lang-dropdown-wrap">
+            <label for="target-lang" class="lang-label-sm">To</label>
+            <select id="target-lang" aria-label="Target language">
+              <option value="">Select target</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Session Controls Card -->
+      <section class="card controls-card">
+        <div class="session-controls">
+          <button id="start-btn" type="button" class="btn btn-start">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            <span>Start</span>
+          </button>
+          <button id="stop-btn" type="button" class="btn btn-stop" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            <span>Stop</span>
+          </button>
+          <button id="clear-btn" type="button" class="btn btn-neutral" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            <span>Clear</span>
+          </button>
+        </div>
+
+        <!-- OCR Controls inline -->
+        <div class="ocr-controls">
+          <button id="ocr-camera-btn" type="button" class="btn btn-outline">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Camera</span>
+          </button>
+          <button id="ocr-gallery-btn" type="button" class="btn btn-outline">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>Gallery</span>
+          </button>
+          <input type="file" id="ocr-camera-input" accept="image/*" capture="environment" hidden>
+          <input type="file" id="ocr-gallery-input" accept="image/*" hidden>
+        </div>
+      </section>
+
+      <!-- OCR Preview with Crop Selection -->
+      <div id="ocr-preview-section" class="card ocr-preview-section" hidden>
+        <div class="card-label">Select area to translate (or tap Translate All)</div>
+        <div id="ocr-crop-container" class="ocr-crop-container">
+          <canvas id="ocr-canvas" class="ocr-canvas"></canvas>
+        </div>
+        <div class="ocr-action-bar">
+          <button id="ocr-translate-selection-btn" type="button" class="btn btn-start btn-sm" disabled>Translate Selection</button>
+          <button id="ocr-translate-all-btn" type="button" class="btn btn-outline btn-sm">Translate All</button>
+          <button id="ocr-reset-selection-btn" type="button" class="btn btn-neutral btn-sm" disabled>Reset</button>
+          <button id="ocr-cancel-btn" type="button" class="btn btn-neutral btn-sm">Cancel</button>
+        </div>
+        <div id="ocr-progress" class="ocr-progress" hidden>
+          <span id="ocr-progress-text">Extracting text...</span>
+          <div class="progress-bar-mini"><div id="ocr-progress-fill" class="progress-bar-mini-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- Status Indicators -->
+      <div class="status-bar">
+        <div id="listening-indicator" class="status-indicator status-listening" hidden>
+          <span class="pulse-dot"></span> Listening...
+        </div>
+        <div id="speaking-indicator" class="status-indicator status-speaking" hidden>
+          <span class="wave-icon">🔊</span> Speaking...
+        </div>
+      </div>
+
+      <!-- Volume & Playback -->
+      <section class="card volume-card">
+        <div class="volume-controls">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.08"/></svg>
+          <input type="range" id="volume-slider" min="0" max="100" value="80" aria-label="Volume">
+          <button id="replay-btn" type="button" class="btn btn-outline btn-sm" aria-label="Replay last translation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+            <span>Replay</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Transcript Panel -->
+      <section class="card transcript-card">
+        <div class="card-label">Conversation</div>
+        <div id="transcript-panel" class="transcript-panel">
+          <div id="interim-text" class="interim-text"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="offline-banner" role="alert" aria-live="assertive" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0119 12.55"/><path d="M5 12.55a10.94 10.94 0 015.17-2.39"/><path d="M10.71 5.05A16 16 0 0122.56 9"/><path d="M1.42 9a15.91 15.91 0 014.7-2.88"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+      <span>No internet. Translation requires a connection.</span>
+    </div>
+
+    <!-- Resume button -->
+    <button id="resume-btn" type="button" class="btn btn-resume" hidden>Resume Session</button>
+
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="js/preferences.js"></script>
+  <script src="js/transcript-panel.js"></script>
+  <script src="js/translation-engine.js"></script>
+  <script src="js/speech-recognizer.js"></script>
+  <script src="js/speech-synthesizer.js"></script>
+  <script src="js/ocr-engine.js"></script>
+  <script src="js/image-cropper.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

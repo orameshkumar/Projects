@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Globe (centered, blue with white details) -->
+  <circle cx="26" cy="32" r="20" fill="#1e88e5"/>
+  <circle cx="26" cy="32" r="19" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.6"/>
+  <!-- Longitude lines -->
+  <ellipse cx="26" cy="32" rx="10" ry="19" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.5"/>
+  <ellipse cx="26" cy="32" rx="4" ry="19" fill="none" stroke="#ffffff" stroke-width="0.7" opacity="0.3"/>
+  <!-- Latitude lines -->
+  <line x1="7" y1="24" x2="45" y2="24" stroke="#ffffff" stroke-width="0.8" opacity="0.4"/>
+  <line x1="7" y1="32" x2="45" y2="32" stroke="#ffffff" stroke-width="0.8" opacity="0.4"/>
+  <line x1="7" y1="40" x2="45" y2="40" stroke="#ffffff" stroke-width="0.8" opacity="0.4"/>
+  <!-- White continents -->
+  <path d="M18 22 Q22 20 27 22 Q30 25 28 29 Q25 31 21 29 Q17 27 18 22Z" fill="#ffffff" opacity="0.8"/>
+  <path d="M29 34 Q33 32 35 35 Q35 39 32 40 Q29 39 29 34Z" fill="#ffffff" opacity="0.7"/>
+  <path d="M16 34 Q19 33 21 35 Q21 38 19 39 Q16 38 16 34Z" fill="#ffffff" opacity="0.6"/>
+  <!-- Sound waves (right side, colorful) -->
+  <path d="M44 25 Q50 29 50 32 Q50 35 44 39" fill="none" stroke="#ff6b6b" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M49 21 Q57 27 57 32 Q57 37 49 43" fill="none" stroke="#a29bfe" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M54 18 Q63 25 63 32 Q63 39 54 46" fill="none" stroke="#fdcb6e" stroke-width="2" stroke-linecap="round"/>
+</svg>

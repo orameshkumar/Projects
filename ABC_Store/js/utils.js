@@ -106,7 +106,7 @@ const Utils = (function () {
   function formatBillForWhatsApp(bill) {
     const lines = [];
 
-    lines.push('\u{1F9FE} *ABC Provisional Store*');
+    lines.push('\u{1F9FE} *' + (typeof Settings !== 'undefined' ? Settings.getStoreName() : 'ABC Store') + '*');
     lines.push('Bill No: ' + bill.billNumber);
     lines.push('Date: ' + formatDate(bill.date));
     lines.push('');

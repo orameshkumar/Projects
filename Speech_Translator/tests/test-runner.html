@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech Translator - Test Runner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { margin-bottom: 10px; color: #00d4ff; }
+    .summary { padding: 15px; margin: 15px 0; border-radius: 8px; background: #16213e; font-size: 1.1em; }
+    .summary .pass { color: #4caf50; font-weight: bold; }
+    .summary .fail { color: #f44336; font-weight: bold; }
+    .summary .total { color: #00d4ff; font-weight: bold; }
+    .suite { margin: 20px 0; border: 1px solid #2a2a4a; border-radius: 8px; overflow: hidden; }
+    .suite-header { padding: 12px 15px; background: #16213e; font-weight: bold; font-size: 1.05em; border-bottom: 1px solid #2a2a4a; }
+    .test-result { padding: 8px 15px; border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; gap: 10px; }
+    .test-result:last-child { border-bottom: none; }
+    .test-result.pass { background: #1b3a1b; }
+    .test-result.fail { background: #3a1b1b; }
+    .test-result .icon { font-size: 1.2em; }
+    .test-result .name { flex: 1; }
+    .test-result .detail { font-size: 0.85em; color: #aaa; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .running { color: #ffc107; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    #log { margin-top: 20px; padding: 15px; background: #0f0f1a; border-radius: 8px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85em; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Speech Translator Test Runner</h1>
+  <div class="summary" id="summary">
+    <span class="running">⏳ Running tests...</span>
+  </div>
+  <div id="results"></div>
+  <h3 style="margin-top:20px; color:#00d4ff;">Console Log</h3>
+  <div id="log"></div>
+
+  <!-- Hidden DOM elements needed by app modules under test -->
+  <div id="test-dom" style="display:none;">
+    <button id="start-btn">Start</button>
+    <button id="stop-btn">Stop</button>
+    <button id="clear-btn">Clear</button>
+    <button id="swap-btn">Swap</button>
+    <select id="source-lang"></select>
+    <select id="target-lang"></select>
+    <input id="volume-slider" type="range" min="0" max="100" value="80">
+    <button id="replay-btn">Replay</button>
+    <div id="listening-indicator" hidden></div>
+    <div id="speaking-indicator" hidden></div>
+    <div id="offline-banner" hidden></div>
+    <button id="resume-btn" hidden>Resume</button>
+    <div id="toast-container"></div>
+    <div id="transcript-panel"><span id="interim-text"></span></div>
+  </div>
+
+  <script type="module">
+    import { runPropertyTests } from './properties.test.js';
+    import { runUnitTests } from './unit.test.js';
+    import { runIntegrationTests } from './integration.test.js';
+
+    const resultsEl = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+    const logEl = document.getElementById('log');
+
+    // Capture console for display
+    const originalLog = console.log;
+    const originalError = console.error;
+    console.log = (...args) => {
+      originalLog(...args);
+      logEl.textContent += args.join(' ') + '\n';
+    };
+    console.error = (...args) => {
+      originalError(...args);
+      logEl.textContent += '[ERROR] ' + args.join(' ') + '\n';
+    };
+
+    let totalPass = 0;
+    let totalFail = 0;
+
+    function renderSuite(name, results) {
+      const suite = document.createElement('div');
+      suite.className = 'suite';
+
+      const header = document.createElement('div');
+      header.className = 'suite-header';
+      const passed = results.filter(r => r.pass).length;
+      const failed = results.filter(r => !r.pass).length;
+      header.textContent = `${name} — ${passed} passed, ${failed} failed`;
+      suite.appendChild(header);
+
+      for (const r of results) {
+        const row = document.createElement('div');
+        row.className = `test-result ${r.pass ? 'pass' : 'fail'}`;
+        row.innerHTML = `
+          <span class="icon">${r.pass ? '✅' : '❌'}</span>
+          <span class="name">${r.name}</span>
+          ${r.detail ? `<span class="detail">${r.detail}</span>` : ''}
+        `;
+        suite.appendChild(row);
+        if (r.pass) totalPass++; else totalFail++;
+      }
+
+      resultsEl.appendChild(suite);
+    }
+
+    async function runAll() {
+      try {
+        console.log('=== Property-Based Tests ===');
+        const propResults = await runPropertyTests();
+        renderSuite('Property-Based Tests (fast-check)', propResults);
+
+        console.log('=== Unit Tests ===');
+        const unitResults = await runUnitTests();
+        renderSuite('Unit Tests', unitResults);
+
+        console.log('=== Integration Tests ===');
+        const intResults = await runIntegrationTests();
+        renderSuite('Integration Tests', intResults);
+      } catch (e) {
+        console.error('Test runner error:', e.message);
+        totalFail++;
+        const row = document.createElement('div');
+        row.className = 'test-result fail';
+        row.innerHTML = `<span class="icon">❌</span><span class="name">Test Runner Error: ${e.message}</span>`;
+        resultsEl.appendChild(row);
+      }
+
+      summaryEl.innerHTML = `
+        Results: <span class="pass">${totalPass} passed</span> |
+        <span class="fail">${totalFail} failed</span> |
+        <span class="total">${totalPass + totalFail} total</span>
+      `;
+    }
+
+    runAll();
+  </script>
+</body>
+</html>
