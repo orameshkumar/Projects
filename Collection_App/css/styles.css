@@ -975,6 +975,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.notes-cell {
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .grand-total-row td {
   border-top: 2px solid var(--color-text);
   padding-top: 12px;

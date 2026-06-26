@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1565c0">
+    <meta name="description" content="Pay Up Partners - Offline Loan Collection PWA">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pay Up Partners">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>Pay Up Partners</title>
+</head>
+<body>
+    <!-- Backup Reminder Banner -->
+    <div id="backup-reminder" class="backup-reminder" hidden>
+        <span>⚠️ It's been a while since your last backup.</span>
+        <button id="backup-reminder-dismiss" class="btn-dismiss">Dismiss</button>
+    </div>
+
+    <header class="app-header" role="banner">
+        <h1 class="app-title" id="app-name-header">Pay Up Partners</h1>
+    </header>
+
+    <main class="app-content" role="main">
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- COLLECTION SCREEN (Default visible) -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="collection-screen" class="screen" aria-label="Daily Collection">
+            <div class="screen-content">
+                <div class="collection-date-picker">
+                    <label for="collection-date">Collection Date:</label>
+                    <input type="date" id="collection-date" aria-label="Select collection date">
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="collection-search" placeholder="🔍 Search by client name..." aria-label="Search collection by client name">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" id="collection-filter-paid">
+                        <span>Not paid today</span>
+                    </label>
+                </div>
+                <div id="collection-list" class="collection-list" aria-live="polite"></div>
+
+                <!-- Payment Modal -->
+                <div id="payment-modal" class="modal-overlay" hidden aria-modal="true" role="dialog" aria-label="Payment confirmation">
+                    <div class="modal-content">
+                        <h2>Collect Payment</h2>
+                        <p id="payment-client-name" class="payment-client-name"></p>
+                        <div id="qr-code-container" class="qr-code-container" aria-label="UPI QR Code"></div>
+                        <div class="form-group">
+                            <label for="payment-amount">Amount (₹)</label>
+                            <input type="number" id="payment-amount" min="1" step="0.01" aria-required="true">
+                            <span class="error-message" id="payment-amount-error" role="alert"></span>
+                        </div>
+                        <div class="form-actions">
+                            <button id="confirm-payment-btn" class="btn-primary">Confirm Payment</button>
+                            <button id="cancel-payment-btn" class="btn-secondary">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- INTEREST SCREEN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="interest-screen" class="screen" hidden aria-label="Interest Collection">
+            <div class="screen-content">
+                <div class="collection-date-picker">
+                    <label for="interest-date">Reference Date:</label>
+                    <input type="date" id="interest-date" aria-label="Select reference date for interest calculation">
+                </div>
+                <div class="search-bar">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" id="interest-filter-unpaid">
+                        <span>Show unpaid only</span>
+                    </label>
+                </div>
+                <div id="interest-list" class="collection-list" aria-live="polite"></div>
+
+                <!-- Interest Payment Modal -->
+                <div id="interest-payment-modal" class="modal-overlay" hidden aria-modal="true" role="dialog" aria-label="Interest payment confirmation">
+                    <div class="modal-content">
+                        <h2 id="interest-modal-title">Collect Interest</h2>
+                        <p id="interest-payment-client-name" class="payment-client-name"></p>
+                        <div id="interest-qr-code-container" class="qr-code-container" aria-label="UPI QR Code"></div>
+                        <div class="form-group">
+                            <label for="interest-payment-amount">Amount (₹)</label>
+                            <input type="number" id="interest-payment-amount" min="1" step="0.01" aria-required="true">
+                            <span class="error-message" id="interest-payment-amount-error" role="alert"></span>
+                        </div>
+                        <div class="form-actions">
+                            <button id="interest-confirm-payment-btn" class="btn-primary">Confirm Payment</button>
+                            <button id="interest-cancel-payment-btn" class="btn-secondary">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- HISTORY SCREEN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="history-screen" class="screen" hidden aria-label="Payment History">
+            <div class="screen-content">
+                <div class="history-filters">
+                    <div class="form-group">
+                        <label for="history-start-date">From:</label>
+                        <input type="date" id="history-start-date" class="date-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="history-end-date">To:</label>
+                        <input type="date" id="history-end-date" class="date-input">
+                    </div>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="history-search" placeholder="🔍 Filter by client name..." aria-label="Filter history by client name">
+                </div>
+                <div id="history-list" class="history-list" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- CLIENTS SCREEN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="clients-screen" class="screen" hidden aria-label="Client Master">
+            <div class="screen-content">
+                <div class="search-bar">
+                    <input type="text" id="client-search" placeholder="🔍 Search by client name..." aria-label="Search clients by name">
+                    <button id="export-btn" class="btn-icon" aria-label="Export clients to CSV" title="Export CSV">📤</button>
+                    <button id="import-btn" class="btn-icon" aria-label="Import clients from CSV" title="Import CSV">📥</button>
+                    <input type="file" id="import-file" accept=".csv" hidden>
+                </div>
+                <div id="client-list" class="client-list" aria-live="polite"></div>
+                <button id="add-client-btn" class="fab" aria-label="Add new client">+</button>
+
+                <!-- Client Form -->
+                <div id="client-form-container" class="form-container" hidden>
+                    <h2 class="section-heading" id="client-form-title">Add Client</h2>
+                    <form id="client-form" novalidate aria-label="Client form">
+                        <div class="form-group">
+                            <label for="client-name">Client Name *</label>
+                            <input type="text" id="client-name" maxlength="100" placeholder="Enter client name" required aria-required="true">
+                            <span class="error-message" id="client-name-error" role="alert"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="client-mobile">Mobile Number *</label>
+                            <input type="tel" id="client-mobile" maxlength="14" placeholder="10 digit mobile number" required aria-required="true">
+                            <span class="error-message" id="client-mobile-error" role="alert"></span>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Save Client</button>
+                            <button type="button" id="client-cancel-btn" class="btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Loan Form -->
+                <div id="loan-form-container" class="form-container" hidden>
+                    <h3 class="section-heading" id="loan-form-title">Add Loan</h3>
+                    <form id="loan-form" novalidate aria-label="Loan form">
+                        <div class="form-group">
+                            <label for="loan-type">Loan Type *</label>
+                            <select id="loan-type" required aria-required="true">
+                                <option value="daily_emi">Daily EMI</option>
+                                <option value="interest_only">Interest Only</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="loan-amount">Total Amount *</label>
+                            <input type="number" id="loan-amount" min="0.01" max="9999999.99" step="0.01" placeholder="Enter total amount" required aria-required="true">
+                            <span class="error-message" id="loan-amount-error" role="alert"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="loan-start-date">Start Date *</label>
+                            <input type="date" id="loan-start-date" required aria-required="true">
+                            <span class="error-message" id="loan-start-date-error" role="alert"></span>
+                        </div>
+                        <div class="form-group" id="loan-duration-group">
+                            <label for="loan-duration">Duration (days)</label>
+                            <input type="number" id="loan-duration" min="1" max="999" value="100" placeholder="Duration in days">
+                            <span class="error-message" id="loan-duration-error" role="alert"></span>
+                        </div>
+                        <div class="form-group" id="loan-rate-group" hidden>
+                            <label for="loan-interest-rate">Monthly Interest Rate (%)</label>
+                            <input type="number" id="loan-interest-rate" min="0.01" max="100" step="0.01" placeholder="e.g., 3">
+                            <span class="error-message" id="loan-interest-rate-error" role="alert"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="loan-emi">EMI</label>
+                            <input type="number" id="loan-emi" readonly placeholder="Auto-calculated" aria-describedby="loan-emi-help">
+                            <small id="loan-emi-help">Auto-calculated based on loan type</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="loan-end-date">End Date</label>
+                            <input type="date" id="loan-end-date" readonly aria-describedby="loan-end-date-help">
+                            <small id="loan-end-date-help">Auto-calculated: Start Date + Duration</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="loan-notes">Notes</label>
+                            <textarea id="loan-notes" rows="3" maxlength="500" placeholder="Optional notes..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Save Loan</button>
+                            <button type="button" id="loan-cancel-btn" class="btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Principal Payment Modal -->
+                <div id="principal-modal" class="modal-overlay" hidden aria-modal="true" role="dialog" aria-label="Principal payment">
+                    <div class="modal-content">
+                        <h2>Pay Principal</h2>
+                        <p id="principal-client-name" class="payment-client-name"></p>
+                        <div id="principal-qr" class="qr-code-container" aria-label="UPI QR Code"></div>
+                        <div class="form-group">
+                            <label for="principal-date">Payment Date</label>
+                            <input type="date" id="principal-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="principal-amount">Amount (₹)</label>
+                            <input type="number" id="principal-amount" min="1" step="0.01" aria-required="true">
+                            <span class="error-message" id="principal-error" role="alert"></span>
+                        </div>
+                        <div class="form-actions">
+                            <button id="principal-confirm-btn" class="btn-primary">Confirm Payment</button>
+                            <button id="principal-cancel-btn" class="btn-secondary">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- REPORTS SCREEN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="reports-screen" class="screen" hidden aria-label="Reports">
+            <div class="screen-content">
+                <div class="reports-date-range">
+                    <div class="form-group">
+                        <label for="report-start-date">From:</label>
+                        <input type="date" id="report-start-date" class="date-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="report-end-date">To:</label>
+                        <input type="date" id="report-end-date" class="date-input">
+                    </div>
+                </div>
+                <nav class="reports-sub-nav" aria-label="Report type navigation">
+                    <button class="report-tab active" data-tab="daywise" aria-pressed="true">Day-wise</button>
+                    <button class="report-tab" data-tab="clientwise" aria-pressed="false">Client-wise</button>
+                    <button class="report-tab" data-tab="outstanding" aria-pressed="false">Outstanding</button>
+                </nav>
+                <div class="search-bar">
+                    <input type="text" id="report-search" placeholder="🔍 Filter by client name..." aria-label="Filter report by client name">
+                </div>
+                <div id="report-content" class="report-content" aria-live="polite"></div>
+                <button id="report-print-btn" class="btn-primary print-btn" aria-label="Print report">🖨️ Print Report</button>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- SETTINGS SCREEN -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="settings-screen" class="screen" hidden aria-label="Settings">
+            <div class="screen-content">
+                <h2 class="section-heading">Settings</h2>
+                <div class="settings-form">
+                    <div class="theme-toggle-group">
+                        <label for="theme-toggle">Dark Theme</label>
+                        <label class="theme-switch">
+                            <input type="checkbox" id="theme-toggle" aria-label="Toggle dark theme">
+                            <span class="theme-slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="settings-app-name">Application Name</label>
+                        <input type="text" id="settings-app-name" maxlength="50" placeholder="Pay Up Partners" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="settings-upi-id">UPI ID *</label>
+                        <input type="text" id="settings-upi-id" maxlength="45" placeholder="e.g., yourname@upi" autocomplete="off">
+                        <span class="error-message" id="settings-error" role="alert"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="backup-frequency">Backup Reminder Frequency</label>
+                        <select id="backup-frequency">
+                            <option value="0">Never</option>
+                            <option value="1">Every day</option>
+                            <option value="3">Every 3 days</option>
+                            <option value="7" selected>Every week</option>
+                            <option value="14">Every 2 weeks</option>
+                            <option value="30">Every month</option>
+                        </select>
+                    </div>
+                    <hr class="settings-divider">
+                    <h3 class="section-subheading">License</h3>
+                    <div id="license-status" class="license-status"></div>
+                    <div class="form-group">
+                        <label for="license-key-input">License Key</label>
+                        <input type="text" id="license-key-input" placeholder="Enter your license key" autocomplete="off">
+                        <span class="error-message" id="license-error" role="alert"></span>
+                    </div>
+                    <button id="license-activate-btn" class="btn-primary">Activate License</button>
+                    <button id="license-remove-btn" class="btn-secondary" hidden>Remove License</button>
+                    <div id="license-success-msg" class="save-confirmation" hidden>License activated!</div>
+
+                    <hr class="settings-divider">
+                    <h3 class="section-subheading">WhatsApp Notifications</h3>
+                    <div class="theme-toggle-group">
+                        <label for="wa-confirm-emi">Confirmation for Daily EMI</label>
+                        <label class="theme-switch">
+                            <input type="checkbox" id="wa-confirm-emi">
+                            <span class="theme-slider"></span>
+                        </label>
+                    </div>
+                    <div class="theme-toggle-group">
+                        <label for="wa-confirm-interest">Confirmation for Interest/Principal</label>
+                        <label class="theme-switch">
+                            <input type="checkbox" id="wa-confirm-interest">
+                            <span class="theme-slider"></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Reminder Timing (Interest Loans)</label>
+                        <div class="checkbox-group" id="wa-reminder-timing">
+                            <label class="filter-checkbox"><input type="checkbox" value="0" id="wa-timing-0"><span>Due date</span></label>
+                            <label class="filter-checkbox"><input type="checkbox" value="1" id="wa-timing-1"><span>1 day before</span></label>
+                            <label class="filter-checkbox"><input type="checkbox" value="3" id="wa-timing-3"><span>3 days before</span></label>
+                            <label class="filter-checkbox"><input type="checkbox" value="5" id="wa-timing-5"><span>5 days before</span></label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="wa-template-confirm">Payment Confirmation Template</label>
+                        <textarea id="wa-template-confirm" rows="3" maxlength="500"></textarea>
+                        <small>Variables: {clientName}, {amount}, {date}, {loanAmount}, {pending}</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="wa-template-reminder">Payment Reminder Template</label>
+                        <textarea id="wa-template-reminder" rows="3" maxlength="500"></textarea>
+                        <small>Variables: {clientName}, {amount}, {date}, {loanAmount}, {pending}, {reminderNumber}</small>
+                    </div>
+                    <button id="settings-save-btn" class="btn-primary" aria-label="Save settings">Save Settings</button>
+                    <div id="settings-save-msg" class="save-confirmation" role="status" hidden>Settings saved successfully!</div>
+
+                    <hr class="settings-divider">
+                    <h3 class="section-subheading">Backup & Restore</h3>
+                    <div class="backup-actions">
+                        <button id="backup-btn" class="btn-primary" aria-label="Create backup now">📦 Create Backup</button>
+                        <button id="restore-btn" class="btn-secondary" aria-label="Restore from backup">📂 Restore Backup</button>
+                        <input type="file" id="restore-file" accept=".json" hidden>
+                    </div>
+                    <div id="backup-last-info" class="backup-info"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" aria-label="Main navigation" role="navigation">
+        <button class="nav-tab active" data-screen="collection-screen" aria-label="Collection tab">
+            <span class="nav-icon" aria-hidden="true">💰</span>
+            <span class="nav-label">Collection</span>
+        </button>
+        <button class="nav-tab" data-screen="interest-screen" aria-label="Interest tab">
+            <span class="nav-icon" aria-hidden="true">🏦</span>
+            <span class="nav-label">Interest</span>
+        </button>
+        <button class="nav-tab" data-screen="history-screen" aria-label="History tab">
+            <span class="nav-icon" aria-hidden="true">📋</span>
+            <span class="nav-label">History</span>
+        </button>
+        <button class="nav-tab" data-screen="clients-screen" aria-label="Clients tab">
+            <span class="nav-icon" aria-hidden="true">👥</span>
+            <span class="nav-label">Clients</span>
+        </button>
+        <button class="nav-tab" data-screen="reports-screen" aria-label="Reports tab">
+            <span class="nav-icon" aria-hidden="true">📊</span>
+            <span class="nav-label">Reports</span>
+        </button>
+        <button class="nav-tab" data-screen="settings-screen" aria-label="Settings tab">
+            <span class="nav-icon" aria-hidden="true">⚙️</span>
+            <span class="nav-label">Settings</span>
+        </button>
+    </nav>
+
+    <!-- Scripts (load order matters) -->
+    <script src="js/qrcode-lib.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/license.js"></script>
+    <script src="js/loans.js"></script>
+    <script src="js/clients.js"></script>
+    <script src="js/collection.js"></script>
+    <script src="js/interest.js"></script>
+    <script src="js/whatsapp.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/backup.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

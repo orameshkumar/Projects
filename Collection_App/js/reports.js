@@ -68,6 +68,13 @@ var Reports = (function() {
    * Load and render the currently selected report type.
    */
   async function loadReport() {
+    // Outstanding report doesn't need date range
+    if (currentReportType === 'outstanding') {
+      var outstandingData = await generateOutstandingReport();
+      renderReport(outstandingData, 'outstanding');
+      return;
+    }
+
     var start = document.getElementById('report-start-date').value;
     var end = document.getElementById('report-end-date').value;
 
@@ -200,9 +207,69 @@ var Reports = (function() {
   }
 
   /**
+   * Generate an outstanding report: show all clients with pending balances.
+   * @returns {Array} [{name, loanType, totalAmount, totalPaid, outstanding, notes}] sorted alphabetically
+   */
+  async function generateOutstandingReport() {
+    try {
+      var clients = await DB.getAllClients();
+      if (!clients || clients.length === 0) return [];
+
+      var result = [];
+
+      for (var i = 0; i < clients.length; i++) {
+        var client = clients[i];
+        var outstanding = 0;
+        var totalPaid = 0;
+
+        if (client.loanType === 'interest_only') {
+          // For interest-only: outstanding = current principalBalance
+          outstanding = client.principalBalance || 0;
+          // Total paid in principal
+          var payments = await DB.getPaymentsByClient(client.id);
+          for (var k = 0; k < payments.length; k++) {
+            if (payments[k].paymentType === 'principal') {
+              totalPaid += payments[k].amount;
+            }
+          }
+        } else {
+          // For daily EMI: outstanding = totalAmount - sum of all payments
+          var emiPayments = await DB.getPaymentsByClient(client.id);
+          for (var j = 0; j < emiPayments.length; j++) {
+            totalPaid += emiPayments[j].amount;
+          }
+          outstanding = client.totalAmount - totalPaid;
+        }
+
+        outstanding = Math.round(outstanding * 100) / 100;
+        if (outstanding <= 0) continue; // Skip fully paid clients
+
+        result.push({
+          name: client.name,
+          loanType: client.loanType || 'daily_emi',
+          totalAmount: client.totalAmount,
+          totalPaid: Math.round(totalPaid * 100) / 100,
+          outstanding: outstanding,
+          notes: client.notes || ''
+        });
+      }
+
+      // Sort alphabetically by name
+      result.sort(function(a, b) {
+        return a.name.localeCompare(b.name);
+      });
+
+      return result;
+    } catch (e) {
+      console.error('Error generating outstanding report:', e);
+      return [];
+    }
+  }
+
+  /**
    * Render the report data as an HTML table.
    * @param {Array} data - Report data array
-   * @param {string} type - 'day-wise' or 'client-wise'
+   * @param {string} type - 'day-wise', 'client-wise', or 'outstanding'
    */
   function renderReport(data, type) {
     var tableContainer = document.getElementById('report-table');
@@ -213,11 +280,11 @@ var Reports = (function() {
       return;
     }
 
-    // Apply client name filter for client-wise report
+    // Apply client name filter for client-wise and outstanding reports
     var clientSearchInput = document.getElementById('report-client-search');
     var clientSearchTerm = clientSearchInput ? clientSearchInput.value.trim().toLowerCase() : '';
 
-    if (clientSearchTerm && type === 'client-wise') {
+    if (clientSearchTerm && (type === 'client-wise' || type === 'outstanding')) {
       data = data.filter(function(item) {
         return item.name.toLowerCase().indexOf(clientSearchTerm) !== -1;
       });
@@ -229,7 +296,38 @@ var Reports = (function() {
 
     var html = '<table>';
 
-    if (type === 'day-wise') {
+    if (type === 'outstanding') {
+      // Outstanding report: Client, Type, Total Borrowed, Total Paid, Outstanding, Notes
+      html += '<thead><tr><th>Client</th><th>Type</th><th class="amount-cell">Borrowed (₹)</th>' +
+              '<th class="amount-cell">Paid (₹)</th><th class="amount-cell">Outstanding (₹)</th><th>Notes</th></tr></thead>';
+      html += '<tbody>';
+      var totalOutstanding = 0;
+      var totalBorrowed = 0;
+      var totalPaidAll = 0;
+      for (var o = 0; o < data.length; o++) {
+        var item = data[o];
+        var typeLabel = item.loanType === 'interest_only' ? 'Interest Only' : 'Daily EMI';
+        html += '<tr>';
+        html += '<td>' + escapeHtml(item.name) + '</td>';
+        html += '<td><span class="loan-type-badge ' + (item.loanType === 'interest_only' ? 'badge-interest-only' : 'badge-daily-emi') + '">' + typeLabel + '</span></td>';
+        html += '<td class="amount-cell">' + item.totalAmount.toFixed(2) + '</td>';
+        html += '<td class="amount-cell">' + item.totalPaid.toFixed(2) + '</td>';
+        html += '<td class="amount-cell"><strong>' + item.outstanding.toFixed(2) + '</strong></td>';
+        html += '<td class="notes-cell">' + escapeHtml(item.notes) + '</td>';
+        html += '</tr>';
+        totalOutstanding += item.outstanding;
+        totalBorrowed += item.totalAmount;
+        totalPaidAll += item.totalPaid;
+      }
+      html += '<tr class="grand-total-row">';
+      html += '<td colspan="2"><strong>Grand Total</strong></td>';
+      html += '<td class="amount-cell"><strong>' + totalBorrowed.toFixed(2) + '</strong></td>';
+      html += '<td class="amount-cell"><strong>' + totalPaidAll.toFixed(2) + '</strong></td>';
+      html += '<td class="amount-cell"><strong>' + totalOutstanding.toFixed(2) + '</strong></td>';
+      html += '<td></td>';
+      html += '</tr>';
+      html += '</tbody>';
+    } else if (type === 'day-wise') {
       html += '<thead><tr><th>Date</th><th class="amount-cell">Amount (₹)</th></tr></thead>';
       html += '<tbody>';
       var grandTotal = 0;
@@ -333,6 +431,7 @@ var Reports = (function() {
     init: init,
     generateDayWiseReport: generateDayWiseReport,
     generateClientWiseReport: generateClientWiseReport,
+    generateOutstandingReport: generateOutstandingReport,
     renderReport: renderReport,
     printReport: printReport
   };

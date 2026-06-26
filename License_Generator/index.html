@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e1e1e">
+    <meta name="description" content="Multi-App License Generator">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+    <title>License Generator</title>
+</head>
+<body>
+    <div class="card">
+        <h1 class="title">🔑 License Generator</h1>
+        <p class="subtitle">Multi-App Key Generator</p>
+
+        <div class="form-group">
+            <label for="app-select">Application</label>
+            <select id="app-select"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="user-name">User Name</label>
+            <input type="text" id="user-name" placeholder="Enter the licensee name" autocomplete="off">
+        </div>
+
+        <button id="generate-btn" class="btn-primary">Generate License</button>
+
+        <div id="output-section" class="output-section" hidden>
+            <p id="app-name-label" class="app-name-label" hidden></p>
+            <label for="license-output">Generated License Key</label>
+            <textarea id="license-output" readonly rows="4"></textarea>
+            <button id="copy-btn" class="btn-secondary">📋 Copy to Clipboard</button>
+            <div id="status-msg" class="status-msg" hidden></div>
+        </div>
+    </div>
+
+    <div class="card manage-card">
+        <h2 class="manage-title">Manage Apps</h2>
+
+        <div class="manage-section">
+            <h3 class="manage-subtitle">Add App</h3>
+            <div class="form-group">
+                <label for="add-app-name">App Name</label>
+                <input type="text" id="add-app-name" placeholder="e.g. My New App" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="add-app-secret">Secret String</label>
+                <input type="text" id="add-app-secret" placeholder="e.g. MY_APP_SECRET_2025" autocomplete="off">
+            </div>
+            <button id="add-app-btn" class="btn-primary btn-small">Add App</button>
+        </div>
+
+        <div class="manage-section">
+            <h3 class="manage-subtitle">Remove App</h3>
+            <p class="manage-hint">Removes the currently selected app from the registry.</p>
+            <button id="remove-app-btn" class="btn-danger">Remove Selected App</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
